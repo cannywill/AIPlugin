@@ -1,0 +1,1 @@
+{"version":3,"file":"PolicySingleton.d.ts","sourceRoot":"","sources":["../../control-plane/PolicySingleton.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,cAAc,EAAE,MAAM,aAAa,CAAC;AAE7C,qBAAa,eAAe;IAC1B,OAAO,CAAC,MAAM,CAAC,QAAQ,CAAkB;IAClC,MAAM,EAAE,cAAc,GAAG,IAAI,CAAQ;IAE5C,OAAO;WAEO,WAAW,IAAI,eAAe;CAM7C"}

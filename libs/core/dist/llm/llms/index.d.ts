@@ -1,0 +1,28 @@
+import { BaseCompletionOptions, IdeSettings, ILLM, ILLMLogger, JSONModelDescription, LLMOptions } from "../..";
+import { BaseLLM } from "../index";
+import Anthropic from "./Anthropic";
+import Asksage from "./Asksage";
+import Bedrock from "./Bedrock";
+import BedrockImport from "./BedrockImport";
+import Cloudflare from "./Cloudflare";
+import Cohere from "./Cohere";
+import CometAPI from "./CometAPI";
+import Flowise from "./Flowise";
+import Gemini from "./Gemini";
+import HuggingFaceInferenceAPI from "./HuggingFaceInferenceAPI";
+import HuggingFaceTEIEmbeddingsProvider from "./HuggingFaceTEI";
+import HuggingFaceTGI from "./HuggingFaceTGI";
+import LlamaCpp from "./LlamaCpp";
+import MockLLM from "./Mock";
+import Ollama from "./Ollama";
+import OpenAI from "./OpenAI";
+import Replicate from "./Replicate";
+import SageMaker from "./SageMaker";
+import ContinueProxy from "./stubs/ContinueProxy";
+import TestLLM from "./Test";
+import VertexAI from "./VertexAI";
+import WatsonX from "./WatsonX";
+export declare const LLMClasses: (typeof OpenAI | typeof Anthropic | typeof Asksage | typeof Bedrock | typeof BedrockImport | typeof Cloudflare | typeof Cohere | typeof CometAPI | typeof Flowise | typeof Gemini | typeof HuggingFaceInferenceAPI | typeof HuggingFaceTEIEmbeddingsProvider | typeof HuggingFaceTGI | typeof LlamaCpp | typeof MockLLM | typeof Ollama | typeof Replicate | typeof SageMaker | typeof ContinueProxy | typeof TestLLM | typeof VertexAI | typeof WatsonX)[];
+export declare function llmFromDescription(desc: JSONModelDescription, readFile: (filepath: string) => Promise<string>, getUriFromPath: (path: string) => Promise<string | undefined>, uniqueId: string, ideSettings: IdeSettings, llmLogger: ILLMLogger, completionOptions?: BaseCompletionOptions): Promise<BaseLLM | undefined>;
+export declare function llmFromProviderAndOptions(providerName: string, llmOptions: LLMOptions): ILLM;
+//# sourceMappingURL=index.d.ts.map

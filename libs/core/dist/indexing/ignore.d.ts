@@ -1,0 +1,21 @@
+import ignore from "ignore";
+export declare const DEFAULT_SECURITY_IGNORE_FILETYPES: string[];
+export declare const DEFAULT_SECURITY_IGNORE_DIRS: string[];
+export declare const ADDITIONAL_INDEXING_IGNORE_FILETYPES: string[];
+export declare const ADDITIONAL_INDEXING_IGNORE_DIRS: string[];
+export declare const DEFAULT_IGNORE_FILETYPES: string[];
+export declare const DEFAULT_IGNORE_DIRS: string[];
+export declare const DEFAULT_IGNORES: string[];
+export declare const defaultIgnoresGlob: string;
+export declare const defaultSecurityIgnoreFile: ignore.Ignore;
+export declare const defaultSecurityIgnoreDir: ignore.Ignore;
+export declare const defaultIgnoreFile: ignore.Ignore;
+export declare const defaultIgnoreDir: ignore.Ignore;
+export declare const DEFAULT_SECURITY_IGNORE: string;
+export declare const DEFAULT_IGNORE: string;
+export declare const defaultFileAndFolderSecurityIgnores: ignore.Ignore;
+export declare const defaultIgnoreFileAndDir: ignore.Ignore;
+export declare function isSecurityConcern(filePathOrUri: string): boolean;
+export declare function throwIfFileIsSecurityConcern(filepath: string): void;
+export declare function gitIgArrayFromFile(file: string): string[];
+//# sourceMappingURL=ignore.d.ts.map

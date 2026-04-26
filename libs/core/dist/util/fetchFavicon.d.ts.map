@@ -1,0 +1,1 @@
+{"version":3,"file":"fetchFavicon.d.ts","sourceRoot":"","sources":["../../util/fetchFavicon.ts"],"names":[],"mappings":"AAEA,wBAAsB,eAAe,CAAC,GAAG,EAAE,GAAG,GAAG,OAAO,CAAC,MAAM,GAAG,SAAS,CAAC,CA4B3E;AAED,wBAAsB,gBAAgB,CACpC,UAAU,EAAE,MAAM,GACjB,OAAO,CAAC,MAAM,GAAG,SAAS,CAAC,CAsB7B;AAED,wBAAsB,YAAY,CAAC,GAAG,EAAE,GAAG,GAAG,OAAO,CAAC,MAAM,GAAG,SAAS,CAAC,CAMxE"}

@@ -1,0 +1,1 @@
+{"version":3,"file":"openedFilesLruCache.d.ts","sourceRoot":"","sources":["../../../autocomplete/util/openedFilesLruCache.ts"],"names":[],"mappings":"AAAA,OAAO,QAAQ,MAAM,WAAW,CAAC;AAGjC,MAAM,MAAM,gBAAgB,GAAG,MAAM,CAAC;AAMtC,eAAO,MAAM,mBAAmB,0BAK9B,CAAC;AAGH,eAAO,MAAM,aAAa;eACP,MAAM,EAAE;CAC1B,CAAC"}

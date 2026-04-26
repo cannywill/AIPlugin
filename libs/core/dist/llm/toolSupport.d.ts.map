@@ -1,0 +1,1 @@
+{"version":3,"file":"toolSupport.d.ts","sourceRoot":"","sources":["../../llm/toolSupport.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,gBAAgB,EAAE,MAAM,IAAI,CAAC;AAEtC,eAAO,MAAM,qBAAqB,EAAE,MAAM,CAAC,MAAM,EAAE,CAAC,KAAK,EAAE,MAAM,KAAK,OAAO,CA6f1E,CAAC;AAEJ,wBAAgB,uBAAuB,CAAC,SAAS,EAAE,MAAM,GAAG,OAAO,CAsBlE;AACD,wBAAgB,wBAAwB,CAAC,gBAAgB,EAAE,gBAAgB,WAU1E"}

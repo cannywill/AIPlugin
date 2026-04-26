@@ -1,0 +1,1 @@
+{"version":3,"file":"historyUtils.d.ts","sourceRoot":"","sources":["../../util/historyUtils.ts"],"names":[],"mappings":"AAMA,OAAO,EAAE,WAAW,EAAE,GAAG,EAAE,MAAM,aAAa,CAAC;AAkC/C,wBAAgB,UAAU,CAAC,OAAO,EAAE,WAAW,EAAE,EAAE,IAAI,CAAC,EAAE,IAAI,GAAG,MAAM,CAwBtE;AAED,wBAAsB,YAAY,CAChC,GAAG,EAAE,GAAG,EACR,OAAO,EAAE,WAAW,EAAE,EACtB,SAAS,CAAC,EAAE,MAAM,mBAmCnB"}

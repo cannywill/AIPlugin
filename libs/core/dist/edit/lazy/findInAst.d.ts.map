@@ -1,0 +1,1 @@
+{"version":3,"file":"findInAst.d.ts","sourceRoot":"","sources":["../../../edit/lazy/findInAst.ts"],"names":[],"mappings":"AAAA,OAAO,MAAM,MAAM,iBAAiB,CAAC;AAErC,wBAAgB,SAAS,CACvB,IAAI,EAAE,MAAM,CAAC,UAAU,EACvB,SAAS,EAAE,CAAC,IAAI,EAAE,MAAM,CAAC,UAAU,KAAK,OAAO,EAC/C,aAAa,GAAE,CAAC,IAAI,EAAE,MAAM,CAAC,UAAU,KAAK,OAAoB,GAC/D,MAAM,CAAC,UAAU,GAAG,IAAI,CAa1B"}

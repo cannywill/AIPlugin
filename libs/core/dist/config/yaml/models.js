@@ -1,0 +1,159 @@
+import { mergeConfigYamlRequestOptions, } from "@continuedev/config-yaml";
+import { LLMClasses } from "../../llm/llms";
+const AUTODETECT = "AUTODETECT";
+const ENV_STRING_KEYS = [
+    "apiType",
+    "apiVersion",
+    "deployment",
+    "deploymentId",
+    "projectId",
+    "region",
+    "profile",
+    "accessKeyId",
+    "secretAccessKey",
+    "modelArn",
+    "aiGatewaySlug",
+    "accountId",
+];
+function applyEnvOptions(options, env) {
+    if ("useLegacyCompletionsEndpoint" in env &&
+        typeof env.useLegacyCompletionsEndpoint === "boolean") {
+        options.useLegacyCompletionsEndpoint = env.useLegacyCompletionsEndpoint;
+    }
+    for (const key of ENV_STRING_KEYS) {
+        if (key in env && typeof env[key] === "string") {
+            options[key] = env[key];
+        }
+    }
+}
+function getModelClass(model) {
+    return LLMClasses.find((llm) => llm.providerName === model.provider);
+}
+// function getContinueProxyModelName(
+//   ownerSlug: string,
+//   packageSlug: string,
+//   model: ModelConfig,
+// ): string {
+//   return `${ownerSlug}/${packageSlug}/${model.provider}/${model.model}`;
+// }
+async function modelConfigToBaseLLM({ model, uniqueId, llmLogger, config, isFromAutoDetect, }) {
+    const cls = getModelClass(model);
+    if (!cls) {
+        return undefined;
+    }
+    const { capabilities, ...rest } = model;
+    const mergedRequestOptions = mergeConfigYamlRequestOptions(rest.requestOptions, config.requestOptions);
+    const contextLength = model.contextLength ?? model.defaultCompletionOptions?.contextLength;
+    let options = {
+        ...rest,
+        contextLength,
+        completionOptions: {
+            ...(model.defaultCompletionOptions ?? {}),
+            model: model.model,
+            maxTokens: model.defaultCompletionOptions?.maxTokens ??
+                cls.defaultOptions?.completionOptions?.maxTokens,
+        },
+        logger: llmLogger,
+        uniqueId,
+        title: model.name,
+        template: model.promptTemplates?.chat,
+        promptTemplates: model.promptTemplates,
+        baseAgentSystemMessage: model.chatOptions?.baseAgentSystemMessage,
+        basePlanSystemMessage: model.chatOptions?.basePlanSystemMessage,
+        baseChatSystemMessage: model.chatOptions?.baseSystemMessage,
+        toolOverrides: model.chatOptions?.toolOverrides
+            ? Object.entries(model.chatOptions.toolOverrides).map(([name, o]) => ({
+                name,
+                ...o,
+            }))
+            : undefined,
+        capabilities: {
+            tools: model.capabilities?.includes("tool_use"),
+            uploadImage: model.capabilities?.includes("image_input"),
+            nextEdit: model.capabilities?.includes("next_edit"),
+        },
+        autocompleteOptions: model.autocompleteOptions,
+        isFromAutoDetect,
+        requestOptions: mergedRequestOptions,
+    };
+    // Model capabilities - need to be undefined if not found
+    // To fallback to our autodetection
+    if (capabilities?.includes("tool_use")) {
+        options.capabilities = {
+            ...options.capabilities,
+            tools: true,
+        };
+    }
+    if (capabilities?.includes("image_input")) {
+        options.capabilities = {
+            ...options.capabilities,
+            uploadImage: true,
+        };
+    }
+    if (model.embedOptions?.maxBatchSize) {
+        options.maxEmbeddingBatchSize = model.embedOptions.maxBatchSize;
+    }
+    if (model.embedOptions?.maxChunkSize) {
+        options.maxEmbeddingChunkSize = model.embedOptions.maxChunkSize;
+    }
+    // These are params that are at model config level in JSON
+    // But we decided to move to nested `env` in YAML
+    // Since types vary and we don't want to blindly spread env for now,
+    // Each one is handled individually here
+    if (model.env) {
+        applyEnvOptions(options, model.env);
+    }
+    const llm = new cls(options);
+    return llm;
+}
+async function autodetectModels({ llm, model, uniqueId, llmLogger, config, }) {
+    try {
+        const modelNames = await llm.listModels();
+        const detectedModels = await Promise.all(modelNames.map(async (modelName) => {
+            // To ensure there are no infinite loops
+            if (modelName === AUTODETECT) {
+                return undefined;
+            }
+            return await modelConfigToBaseLLM({
+                model: {
+                    ...model,
+                    model: modelName,
+                    name: modelName,
+                },
+                uniqueId,
+                llmLogger,
+                config,
+                isFromAutoDetect: true,
+            });
+        }));
+        return detectedModels.filter((x) => typeof x !== "undefined");
+    }
+    catch (e) {
+        console.warn("Error listing models: ", e);
+        return [];
+    }
+}
+export async function llmsFromModelConfig({ model, uniqueId, llmLogger, config, }) {
+    const baseLlm = await modelConfigToBaseLLM({
+        model,
+        uniqueId,
+        llmLogger,
+        config,
+    });
+    if (!baseLlm) {
+        return [];
+    }
+    if (model.model === AUTODETECT) {
+        const models = await autodetectModels({
+            llm: baseLlm,
+            model,
+            uniqueId,
+            llmLogger,
+            config,
+        });
+        return models;
+    }
+    else {
+        return [baseLlm];
+    }
+}

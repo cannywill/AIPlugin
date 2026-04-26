@@ -1,0 +1,1 @@
+{"version":3,"file":"requestRule.d.ts","sourceRoot":"","sources":["../../../tools/definitions/requestRule.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,yBAAyB,EAAE,OAAO,EAAE,MAAM,OAAO,CAAC;AAG3D,MAAM,WAAW,eAAe;IAC9B,IAAI,EAAE,MAAM,CAAC;CACd;AAiBD,wBAAgB,yBAAyB,CACvC,KAAK,EAAE,yBAAyB,CAAC,OAAO,CAAC,GACxC,MAAM,CAIR;AAWD,eAAO,MAAM,eAAe,EAAE,OA2B5B,CAAC"}

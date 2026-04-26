@@ -1,0 +1,1 @@
+{"version":3,"file":"TextGenWebUI.d.ts","sourceRoot":"","sources":["../../../llm/llms/TextGenWebUI.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,MAAM,gBAAgB,CAAC;AAE5C,OAAO,MAAM,MAAM,aAAa,CAAC;AAEjC,cAAM,YAAa,SAAQ,MAAM;IAC/B,MAAM,CAAC,YAAY,SAAoB;IACvC,MAAM,CAAC,cAAc,EAAE,OAAO,CAAC,UAAU,CAAC,CAExC;CACH;AAED,eAAe,YAAY,CAAC"}

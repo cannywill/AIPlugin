@@ -1,0 +1,1 @@
+{"version":3,"file":"singleFindAndReplace.d.ts","sourceRoot":"","sources":["../../../tools/definitions/singleFindAndReplace.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,IAAI,EAAE,MAAM,OAAO,CAAC;AAO7B,MAAM,WAAW,wBAAwB;IACvC,QAAQ,EAAE,MAAM,CAAC;IACjB,UAAU,EAAE,MAAM,CAAC;IACnB,UAAU,EAAE,MAAM,CAAC;IACnB,WAAW,CAAC,EAAE,OAAO,CAAC;CACvB;AAED,eAAO,MAAM,wBAAwB,EAAE,IAwFtC,CAAC"}

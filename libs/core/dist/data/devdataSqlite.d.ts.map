@@ -1,0 +1,1 @@
+{"version":3,"file":"devdataSqlite.d.ts","sourceRoot":"","sources":["../../data/devdataSqlite.ts"],"names":[],"mappings":"AAKA,OAAO,EAAE,kBAAkB,EAAE,MAAM,6BAA6B,CAAC;AAKjE,qBAAa,eAAe;IAC1B,MAAM,CAAC,EAAE,EAAE,kBAAkB,GAAG,IAAI,CAAQ;mBAEvB,YAAY;WA0Bb,kBAAkB,CACpC,KAAK,EAAE,MAAM,EACb,QAAQ,EAAE,MAAM,EAChB,YAAY,EAAE,MAAM,EACpB,eAAe,EAAE,MAAM;WASL,eAAe;WAWf,iBAAiB;WAWxB,GAAG;CAiBjB"}

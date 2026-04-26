@@ -1,0 +1,1 @@
+{"version":3,"file":"getStopTokens.d.ts","sourceRoot":"","sources":["../../../autocomplete/templating/getStopTokens.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,OAAO,CAAC;AAC1C,OAAO,EAAE,wBAAwB,EAAE,MAAM,uCAAuC,CAAC;AAcjF,wBAAgB,aAAa,CAC3B,iBAAiB,EAAE,OAAO,CAAC,iBAAiB,CAAC,GAAG,SAAS,EACzD,IAAI,EAAE,wBAAwB,EAC9B,KAAK,EAAE,MAAM,GACZ,MAAM,EAAE,CAYV"}

@@ -1,0 +1,108 @@
+/**
+ * 文件类型：协议定义
+ * 文件作用：定义 Flutter WebView 与 Core 之间的消息协议。
+ * 主要职责：裁剪掉非 Flutter 环境的 IDE 通道，仅保留插件需要的协议字段。
+ */
+import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
+import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
+
+import {
+  AcceptOrRejectDiffPayload,
+  AddToChatPayload,
+  ApplyState,
+  ApplyToFilePayload,
+  ContextItemWithId,
+  HighlightedCodePayload,
+  MessageContent,
+  RangeInFile,
+  RangeInFileWithContents,
+  SetCodeToEditPayload,
+  ShowFilePayload,
+} from "../";
+
+export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
+  openUrl: [string, void];
+  applyToFile: [ApplyToFilePayload, void];
+  overwriteFile: [{ filepath: string; prevFileContent: string | null }, void];
+  showTutorial: [undefined, void];
+  showFile: [ShowFilePayload, void];
+  toggleDevTools: [undefined, void];
+  reloadWindow: [undefined, void];
+  focusEditor: [undefined, void];
+  toggleFullScreen: [{ newWindow?: boolean } | undefined, void];
+  insertAtCursor: [{ text: string }, void];
+  copyText: [{ text: string }, void];
+  acceptDiff: [AcceptOrRejectDiffPayload, void];
+  rejectDiff: [AcceptOrRejectDiffPayload, void];
+  "edit/sendPrompt": [
+    {
+      prompt: MessageContent;
+      range: RangeInFileWithContents;
+    },
+    string | undefined,
+  ];
+  "edit/addCurrentSelection": [undefined, void];
+  "edit/clearDecorations": [undefined, void];
+  "session/share": [{ sessionId: string }, void];
+  createBackgroundAgent: [
+    {
+      content: MessageContent;
+      contextItems: ContextItemWithId[];
+      selectedCode: RangeInFile[];
+      organizationId?: string;
+      agent?: string;
+    },
+    void,
+  ];
+  listBackgroundAgents: [
+    { organizationId?: string; limit?: number },
+    {
+      agents: Array<{
+        id: string;
+        name: string | null;
+        status: string;
+        repoUrl: string;
+        createdAt: string;
+        metadata?: {
+          github_repo?: string;
+        };
+      }>;
+      totalCount: number;
+    },
+  ];
+  openAgentLocally: [
+    {
+      agentSessionId: string;
+    },
+    void,
+  ];
+};
+
+export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
+  setInactive: [undefined, void];
+  newSessionWithPrompt: [{ prompt: string }, void];
+  userInput: [{ input: string }, void];
+  focusContinueInput: [undefined, void];
+  focusContinueInputWithoutClear: [undefined, void];
+  focusContinueInputWithNewSession: [undefined, void];
+  highlightedCode: [HighlightedCodePayload, void];
+  setCodeToEdit: [SetCodeToEditPayload, void];
+  navigateTo: [{ path: string; toggle?: boolean }, void];
+  addModel: [undefined, void];
+
+  focusContinueSessionId: [{ sessionId: string | undefined }, void];
+  newSession: [undefined, void];
+  loadAgentSession: [{ session: any }, void];
+  setTheme: [{ theme: any }, void];
+  setColors: [{ [key: string]: string }, void];
+  setupApiKey: [undefined, void];
+  setupLocalConfig: [undefined, void];
+  incrementFtc: [undefined, void];
+  openOnboardingCard: [undefined, void];
+  applyCodeFromChat: [undefined, void];
+  updateApplyState: [ApplyState, void];
+  exitEditMode: [undefined, void];
+  focusEdit: [undefined, void];
+  generateRule: [undefined, void];
+  addToChat: [AddToChatPayload, void];
+};

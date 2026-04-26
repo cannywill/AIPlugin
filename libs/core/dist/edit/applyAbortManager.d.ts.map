@@ -1,0 +1,1 @@
+{"version":3,"file":"applyAbortManager.d.ts","sourceRoot":"","sources":["../../edit/applyAbortManager.ts"],"names":[],"mappings":"AAAA,qBAAa,iBAAiB;IAC5B,OAAO,CAAC,MAAM,CAAC,QAAQ,CAAoB;IAC3C,OAAO,CAAC,WAAW,CAA+B;IAElD,OAAO;WAIO,WAAW,IAAI,iBAAiB;IAOvC,GAAG,CAAC,EAAE,EAAE,MAAM,GAAG,eAAe;IAShC,KAAK,CAAC,EAAE,EAAE,MAAM,GAAG,IAAI;IAQvB,KAAK,IAAI,IAAI;CAIrB"}

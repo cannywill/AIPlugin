@@ -1,0 +1,3 @@
+import { type HandlebarsType } from "./handlebarUtils";
+export declare function renderTemplatedString(handlebars: HandlebarsType, template: string, inputData: Record<string, string>, availableHelpers: Array<[string, Handlebars.HelperDelegate]>, readFile: (filepath: string) => Promise<string>, getUriFromPath: (path: string) => Promise<string | undefined>): Promise<string>;
+//# sourceMappingURL=renderTemplatedString.d.ts.map
