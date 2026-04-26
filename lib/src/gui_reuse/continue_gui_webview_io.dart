@@ -1,6 +1,6 @@
-/// 文件类型：组件
-/// 文件作用：继续复用 Continue GUI 的 WebView 容器与静态资源加载器。
-/// 主要职责：解析 GUI 路径、启动本地静态服务，并提供更易诊断的错误提示。
+// 文件类型：组件
+// 文件作用：继续复用 Continue GUI 的 WebView 容器与静态资源加载器。
+// 主要职责：解析 GUI 路径、启动本地静态服务，并提供更易诊断的错误提示。
 
 import 'dart:async';
 import 'dart:convert';

@@ -1,166 +1,154 @@
 # app_ai_plugin
 
-Flutter plugin scaffold for a Continue-style AI plugin shell.
+[![pub package](https://img.shields.io/pub/v/app_ai_plugin.svg)](https://pub.dev/packages/app_ai_plugin)
 
-## What is in this package
+Flutter plugin shell that hosts the [Continue](https://github.com/continuedev/continue)
+GUI inside a WebView and routes its host/core protocol to Dart adapters and a
+native Continue binary subprocess.
 
-- Plugin bridge API
-  - `AppAiPlugin`
-  - `AppAiPluginPlatform`
-  - `MethodChannelAppAiPlugin`
-- Continue-compatible shell primitives
-  - `ContinueMessage`
-  - `ContinueShellController`
-  - `HostAdapter`
-  - `CoreTransport`
-- Reusable Flutter UI
-  - `AppAiShell`
-  - `AppAiSessionSidebar`
-  - `AppAiChatTimeline`
-  - `AppAiChatComposer`
-  - `AppAiContinueReusePane`
+> **Status:** early preview. APIs may change in 0.x releases.
 
-## Public entrypoints
+## What this package gives you
 
-- `package:app_ai_plugin/app_ai_plugin.dart`
-- `package:app_ai_plugin/app_ai_plugin_ui.dart`
+- **Continue GUI in a WebView** — load a built Continue GUI bundle (`dist/`)
+  from disk or a Vite dev server URL, with the postMessage bridge wired.
+- **Protocol layer** — `ContinueShellController` routes incoming
+  `ContinueMessage`s to either a `HostAdapter` (IDE-style requests) or a
+  `CoreTransport` (LLM / config / history requests).
+- **Transports**
+  - `MockContinueCoreTransport` — in-memory fake for development; lets the GUI
+    render and stream replies without launching the real Continue binary.
+  - `ProcessCoreTransport` — spawns the upstream Continue binary and speaks
+    JSON over stdin/stdout (desktop only).
+- **Host adapters** for workspace reads, IDE-info responses, and native bridges
+  (`openUrl`, `showToast`, `readSecrets` / `writeSecrets`).
+- **Native plumbing** — Method-channel implementations on Android (Toast +
+  `EncryptedSharedPreferences`), iOS / macOS (Keychain + `NSWorkspace` /
+  `UIApplication`).
 
-## Structure
+## Supported platforms
 
-```text
-lib/
-  app_ai_plugin.dart
-  app_ai_plugin_ui.dart
-  src/
-    app/
-    host/
-    plugin/
-    protocol/
-    transport/
-    ui/
+| Platform | Webview | Native host methods |
+|---|---|---|
+| macOS    | ✅ | Keychain / NSWorkspace |
+| iOS      | ✅ | Keychain / UIApplication |
+| Android  | ✅ | EncryptedSharedPreferences / Intent |
+
+Linux, Windows and Web are out of scope for this release.
+
+## Install
+
+```yaml
+dependencies:
+  app_ai_plugin: ^0.0.1
 ```
 
-## Continue GUI reuse
+## Quick start
 
-The reusable Flutter shell intentionally keeps a `reuseGuiChild` slot.
-That slot is where you can mount a WebView and progressively reuse Continue's
-existing GUI instead of rewriting everything at once.
+The package does **not** bundle the Continue GUI dist or the Continue binary —
+both are large native artifacts you wire up at runtime. The recommended setup:
 
-This package now includes:
-
-- `ContinueGuiSource`
-- `ContinueGuiShellPort`
-- `ContinueGuiWebView`
-
-## Running with Continue GUI
-
-### Recommended: vendor the GUI inside the plugin repo
-
-The Continue GUI source is now vendored under:
-
-```text
-/Users/linzhibin/Desktop/code/AppAIPlugin/libs/gui
-```
-
-The Continue core source is now vendored under:
-
-```text
-/Users/linzhibin/Desktop/code/AppAIPlugin/libs/core
-```
-
-The example app will look for `../libs/gui/dist` by default on desktop, so after a local build you can launch the example without passing `CONTINUE_GUI_DIST`.
-
-Build the vendored GUI:
+1. **Build the Continue GUI** somewhere on disk and note the path to its
+   `dist/` directory (this is a vanilla Vite build of the upstream
+   [Continue GUI](https://github.com/continuedev/continue/tree/main/gui)).
+2. **Download or build a Continue binary** for your target platform.
+3. **Pass paths via `--dart-define`** when launching your Flutter app:
 
 ```bash
-cd /Users/linzhibin/Desktop/code/AppAIPlugin/libs/gui
-npm install
-npm run build
+flutter run -d macos \
+  --dart-define=CONTINUE_GUI_DIST=/abs/path/to/gui/dist \
+  --dart-define=CONTINUE_BINARY_EXECUTABLE=/abs/path/to/continue-binary \
+  --dart-define=CONTINUE_WORKSPACE_DIR=/abs/path/to/your/project
 ```
 
-Then run the Flutter example:
+If you omit `CONTINUE_BINARY_EXECUTABLE` the example falls back to a fully
+in-memory demo transport — useful for UI work, but no real LLM calls happen.
 
-```bash
-cd /Users/linzhibin/Desktop/code/AppAIPlugin/example
-flutter run -d macos
+## Minimal usage
+
+```dart
+import 'package:app_ai_plugin/app_ai_plugin.dart';
+import 'package:app_ai_plugin_ui/app_ai_plugin_ui.dart';
+import 'package:flutter/material.dart';
+
+class App extends StatelessWidget {
+  const App({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ContinueShellController(
+      hostAdapter: createContinueGuiDemoHostAdapter(),
+      coreTransport: createContinueGuiDemoCoreTransport(),
+    );
+
+    return MaterialApp(
+      home: AppAiShell(
+        controller: controller,
+        // Point at a built Continue GUI dist or a Vite dev URL.
+        guiSource: ContinueGuiSource.fromDistPath('/abs/path/to/gui/dist'),
+      ),
+    );
+  }
+}
 ```
 
-### Option 1: Reuse a vendored Vite dev server
+The full example app (`example/`) shows:
 
-```bash
-cd /Users/linzhibin/Desktop/code/AppAIPlugin/libs/gui
-npm run dev
+- mounting the GUI in a WebView via `ContinueGuiWebView`;
+- swapping between the demo bridge and a real `ProcessCoreTransport`;
+- handling streamed `llm/streamChat` chunks;
+- secret storage via the native `HostAdapter`.
 
-cd /Users/linzhibin/Desktop/code/AppAIPlugin/example
-flutter run -d macos --dart-define=CONTINUE_GUI_URL=http://127.0.0.1:5173
+## Architecture
+
+```
+Continue GUI (React in WebView)
+    │  postMessage bridge
+    ▼
+ContinueGuiShellPort
+    │  Stream<ContinueMessage>
+    ▼
+ContinueShellController
+    ├── if message.type ∈ kHostHandledMessageTypes → HostAdapter
+    │     (ChannelBackedHostAdapter → native impls,
+    │      LocalWorkspaceHostAdapter for fs reads,
+    │      StaticHostAdapter for fixed values)
+    └── else → CoreTransport
+          (ProcessCoreTransport → continue-binary subprocess,
+           or MockContinueCoreTransport for development)
 ```
 
-### Option 2: Override the built bundle path manually
+`kHostHandledMessageTypes` in `lib/src/protocol/continue_routes.dart` is the
+source of truth for which messages the controller answers locally vs. forwards
+to core. Add to it when you wire up new host capabilities.
 
-```bash
-cd /Users/linzhibin/Desktop/code/AppAIPlugin/example
-flutter run -d macos --dart-define=CONTINUE_GUI_DIST=/absolute/path/to/gui/dist
+## Public Dart entrypoints
+
+```dart
+import 'package:app_ai_plugin/app_ai_plugin.dart';      // logic / protocol / transports
+import 'package:app_ai_plugin/app_ai_plugin_ui.dart';   // widgets / WebView
 ```
 
-The plugin starts a local static server and loads the built `index.html` through WebView.
+## Native host methods
 
-For local development, keeping the source and dist together under `libs/gui` is the cleanest setup. If you later want a fully self-contained distributable app, the next step is to copy the built dist into Flutter-managed assets or extract it into an app-managed runtime directory during packaging.
+`ChannelBackedHostAdapter` is backed by native platform code for:
 
-## Example
+- `openUrl`, `showToast`, `closeSidebar`, `reportError`
+- `readSecrets`, `writeSecrets` (Keychain on macOS / iOS,
+  `EncryptedSharedPreferences` with SharedPreferences fallback on Android)
 
-The example app now demonstrates:
+## Continue compatibility
 
-- componentized shell UI
-- session sidebar
-- chat timeline
-- composer
-- a placeholder pane for Continue GUI WebView reuse
-- direct Continue GUI WebView reuse when `CONTINUE_GUI_URL` or
-  `CONTINUE_GUI_DIST` is provided
+This plugin tracks the
+[Continue](https://github.com/continuedev/continue) host/core protocol. The
+bridge expects a Continue binary built from the upstream repo and a GUI dist
+built from `gui/`. Major-version protocol drift in upstream Continue may
+require updating `kHostHandledMessageTypes` and message-handling code.
 
-## Continue GUI Demo Bridge
+## License
 
-When `example/lib/main.dart` mounts `ContinueGuiWebView`, it also starts a demo shell bridge:
+Apache 2.0. See [LICENSE](LICENSE).
 
-- `createContinueGuiDemoHostAdapter()` handles IDE-style requests such as `getWorkspaceDirs`, `getCurrentFile`, and `getControlPlaneSessionInfo`
-- `createContinueGuiDemoCoreTransport()` responds to core requests such as `config/getSerializedProfileInfo`, `history/list`, and `llm/streamChat`
-
-This lets the reused Continue GUI render inside Flutter before wiring the real Continue binary and host method bridge.
-
-## Real Continue Binary Bridge
-
-The plugin now supports a desktop subprocess transport that talks to the real Continue binary over `stdin/stdout`, matching `binary/src/index.ts` in the upstream Continue repository.
-
-You can switch the example app from demo mode to real binary mode with `dart-define` values:
-
-```bash
-flutter run \
-  --dart-define=CONTINUE_GUI_DIST=/absolute/path/to/AppAIPlugin/libs/gui/dist \
-  --dart-define=CONTINUE_BINARY_EXECUTABLE=/absolute/path/to/continue-main/binary/bin/darwin-arm64/continue-binary \
-  --dart-define=CONTINUE_WORKSPACE_DIR=/absolute/path/to/AppAIPlugin/libs/core
-```
-
-For desktop integration this uses:
-
-- `ProcessCoreTransport` for the Continue binary subprocess
-- `LocalWorkspaceHostAdapter` for workspace/file IDE-style requests
-- `ChannelBackedHostAdapter` for native host actions such as `openUrl` and `showToast`
-
-If `CONTINUE_BINARY_EXECUTABLE` is omitted, the example keeps using the demo bridge.
-
-## Native Host Methods
-
-`ChannelBackedHostAdapter` is now backed by native platform implementations for:
-
-- `openUrl`
-- `showToast`
-- `readSecrets`
-- `writeSecrets`
-- `reportError`
-- `closeSidebar`
-
-Current behavior by platform:
-
-- Android: `openUrl` uses `Intent.ACTION_VIEW`, `showToast` uses native `Toast`, secrets use `EncryptedSharedPreferences` with a SharedPreferences fallback
-- iOS: `openUrl` uses `UIApplication.shared.open`, `showToast` uses a transient `UIAlertController`, secrets use Keychain
-- macOS: `openUrl` uses `NSWorkspace.shared.open`, `showToast` uses an alert-style native presentation, secrets use Keychain
+The reference Continue source code is © Continue Dev, Inc., licensed under
+Apache 2.0; this package does **not** redistribute Continue source — users
+build it themselves and point this plugin at the artifacts.

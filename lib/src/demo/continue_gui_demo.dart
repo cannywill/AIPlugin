@@ -3,10 +3,10 @@ import '../host/static_host_adapter.dart';
 import '../transport/core_transport.dart';
 import '../transport/mock_continue_core_transport.dart';
 
-const String _workspaceDirectory =
-    'file:///Users/linzhibin/Desktop/code/AppAIPlugin/libs/core';
-const String _currentFilePath =
-    'file:///Users/linzhibin/Desktop/code/AppAIPlugin/libs/core/core.ts';
+// Demo placeholders. Real apps wire workspace + current-file resolution to a
+// HostAdapter (see ChannelBackedHostAdapter / LocalWorkspaceHostAdapter).
+const String _workspaceDirectory = 'file:///workspace';
+const String _currentFilePath = 'file:///workspace/example.ts';
 const Map<String, Object?> _demoChatModel = {
   'title': 'GPT-4.1 Demo',
   'model': 'gpt-4.1',

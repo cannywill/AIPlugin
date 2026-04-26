@@ -14,7 +14,7 @@ export interface ModelEntry {
 }
 
 const BAILIAN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
-const BAILIAN_API_KEY = "sk-2019401133d54d8eac0b29030aeabae1";
+const BAILIAN_API_KEY = "";
 
 export class Params {
     static readonly isDebug = true;

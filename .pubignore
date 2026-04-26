@@ -1,0 +1,117 @@
+# .pubignore — files NOT shipped to pub.dev.
+# When this file exists, pub publish ignores .gitignore and uses this instead,
+# so the rules below must cover BOTH:
+#   - everything we already ignore in git (build artifacts, IDE files, etc.)
+#   - things we ship in the repo for development but DO NOT want on pub.dev.
+
+# =============================================================================
+# Vendored Continue (TypeScript core + React GUI).
+# These live in the repo for development convenience, but they are NOT part of
+# the published Flutter plugin. End users wire up the Continue binary and GUI
+# dist via --dart-define at runtime. See README.md.
+# =============================================================================
+libs/
+
+# =============================================================================
+# Heavy example tree — only the Dart sources are useful as documentation.
+# Native build outputs and per-platform shells are excluded; users can scaffold
+# their own with `flutter create`.
+# =============================================================================
+example/build/
+example/.dart_tool/
+example/macos/Pods/
+example/macos/Podfile.lock
+example/macos/Flutter/ephemeral/
+example/ios/Pods/
+example/ios/Podfile.lock
+example/ios/Flutter/ephemeral/
+example/android/.gradle/
+example/android/build/
+example/android/app/build/
+example/android/local.properties
+example/linux/flutter/ephemeral/
+example/windows/flutter/ephemeral/
+example/integration_test/
+
+# =============================================================================
+# Flutter / Dart
+# =============================================================================
+.dart_tool/
+.pub-cache/
+.pub/
+build/
+**/build/
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+coverage/
+*.lcov
+**/*.g.dart
+**/*.freezed.dart
+/pubspec.lock
+
+# =============================================================================
+# Node (in case any node artifact escapes libs/)
+# =============================================================================
+node_modules/
+**/node_modules/
+*.tsbuildinfo
+
+# =============================================================================
+# macOS / iOS
+# =============================================================================
+.DS_Store
+**/.DS_Store
+**/Pods/
+**/Podfile.lock
+**/xcuserdata/
+**/DerivedData/
+**/Flutter/Flutter.framework
+**/Flutter/Flutter.podspec
+**/Flutter/flutter_export_environment.sh
+**/Flutter/Generated.xcconfig
+**/Flutter/ephemeral/
+**/Flutter/flutter_assets/
+
+# =============================================================================
+# Android
+# =============================================================================
+**/.gradle/
+**/local.properties
+**/captures/
+**/.cxx/
+*.keystore
+*.jks
+**/android/app/release/
+**/android/app/debug/
+**/android/app/profile/
+**/key.properties
+
+# =============================================================================
+# Linux / Windows generated Flutter shims
+# =============================================================================
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+
+# =============================================================================
+# AI / agent docs — these are for contributors, not pub.dev consumers.
+# =============================================================================
+AGENTS.md
+CLAUDE.md
+
+# =============================================================================
+# Logs / temp / dev tooling
+# =============================================================================
+*.log
+.metadata
+*.swp
+*~
+.claude/
+.swiftpm/
+.atom/
+.history
+.svn/
+migrate_working_dir/
