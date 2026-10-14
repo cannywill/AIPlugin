@@ -222,10 +222,8 @@ export class CompletionProvider {
                     .put(outcome.prefix, outcome.completion)
                     .catch((e) => console.warn(`Failed to save to cache: ${e.message}`));
             }
-            const ideType = (await this.ide.getIdeInfo()).ideType;
-            if (ideType === "jetbrains") {
-                this.markDisplayed(input.completionId, outcome);
-            }
+            // Flutter 环境下同样需要记录展示状态，避免重复触发
+            this.markDisplayed(input.completionId, outcome);
             return outcome;
         }
         catch (e) {

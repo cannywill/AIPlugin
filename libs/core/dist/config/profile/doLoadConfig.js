@@ -1,3 +1,8 @@
+/**
+ * 文件类型：配置加载
+ * 文件作用：根据 YAML/JSON 配置生成最终运行时配置。
+ * 主要职责：合并配置、注入工具与上下文提供者、初始化遥测。
+ */
 import fs from "fs";
 import { stringifyMcpPrompt } from "../../commands/slash/mcpSlashCommand";
 import { convertRuleBlockToSlashCommand } from "../../commands/slash/ruleBlockSlashCommand";
@@ -263,14 +268,6 @@ export default async function doLoadConfig(options) {
             });
         }
     });
-    // VS Code has an IDE telemetry setting
-    // Since it's a security concern we use OR behavior on false
-    if (newConfig.allowAnonymousTelemetry !== false &&
-        ideInfo.ideType === "vscode") {
-        if ((await ide.isTelemetryEnabled()) === false) {
-            newConfig.allowAnonymousTelemetry = false;
-        }
-    }
     // Org policies
     const policy = PolicySingleton.getInstance().policy?.policy;
     if (policy?.allowAnonymousTelemetry === false) {

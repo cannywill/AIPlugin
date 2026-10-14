@@ -1,4 +1,9 @@
 import ignore from "ignore";
+/**
+ * 文件类型：索引忽略配置
+ * 文件作用：定义默认索引时忽略的目录与文件类型。
+ * 主要职责：避免索引无关或敏感目录，聚焦 Flutter 运行所需内容。
+ */
 export declare const DEFAULT_SECURITY_IGNORE_FILETYPES: string[];
 export declare const DEFAULT_SECURITY_IGNORE_DIRS: string[];
 export declare const ADDITIONAL_INDEXING_IGNORE_FILETYPES: string[];

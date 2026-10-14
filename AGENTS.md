@@ -90,6 +90,13 @@ npm run dev              # Vite dev server on :5173 (use with --dart-define=CONT
 cd libs/core
 npm install
 # Build/test scripts mirror upstream Continue; consult libs/core/package.json before running.
+
+# Local continue-binary (built from this repo, outputs binary/bin/<target>/continue-binary)
+./scripts/build_local_continue_binary.sh
+# or manually:
+cd binary
+npm install
+npm run build
 ```
 
 ### Run the example wired to the real Continue binary
@@ -98,7 +105,7 @@ npm install
 cd example
 flutter run -d macos \
   --dart-define=CONTINUE_GUI_DIST=/absolute/path/to/AppAIPlugin/libs/gui/dist \
-  --dart-define=CONTINUE_BINARY_EXECUTABLE=/absolute/path/to/continue-main/binary/bin/darwin-arm64/continue-binary \
+  --dart-define=CONTINUE_BINARY_EXECUTABLE=/absolute/path/to/AppAIPlugin/binary/bin/darwin-arm64/continue-binary \
   --dart-define=CONTINUE_WORKSPACE_DIR=/absolute/path/to/AppAIPlugin/libs/core
 ```
 

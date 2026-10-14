@@ -9,7 +9,6 @@ import { useAuth } from "../../context/Auth";
 import { useNavigationListener } from "../../hooks/useNavigationListener";
 import { bottomTabSections, getAllTabs, topTabSections } from "./configTabs";
 import { CliInstallBanner } from "../../components/CliInstallBanner";
-import { AccountDropdown } from "./features/account/AccountDropdown";
 
 function ConfigPage() {
   useNavigationListener();
@@ -67,10 +66,6 @@ function ConfigPage() {
               className={section.className}
             />
           ))}
-
-          <Divider />
-
-          <AccountDropdown />
         </div>
       </div>
 

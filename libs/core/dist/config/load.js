@@ -1,3 +1,8 @@
+/**
+ * 文件类型：配置加载
+ * 文件作用：将 Continue 配置转换为运行时可用的配置对象。
+ * 主要职责：处理配置解析、模型实例化与工具/上下文提供者构建。
+ */
 import { execSync } from "child_process";
 import * as fs from "fs";
 import os from "os";
@@ -29,6 +34,11 @@ import { loadConfigContextProviders } from "./loadContextProviders";
 import { modifyAnyConfigWithSharedConfig } from "./sharedConfig";
 import { getModelByRole, isSupportedLanceDbCpuTargetForLinux, serializePromptTemplates, } from "./util";
 import { validateConfig } from "./validation.js";
+/**
+ * 功能：读取并解析 config.json，兼容 env 替换。
+ * 入参：filepath 为配置文件路径。
+ * 返回：解析后的序列化配置对象。
+ */
 export function resolveSerializedConfig(filepath) {
     let content = fs.readFileSync(filepath, "utf8");
     const config = JSONC.parse(content);
@@ -58,6 +68,11 @@ const configMergeKeys = {
     slashCommands: (a, b) => a.name === b.name,
     customCommands: (a, b) => a.name === b.name,
 };
+/**
+ * 功能：合并全局与工作区配置，输出序列化配置。
+ * 入参：workspaceConfigs 与 ideSettings 等环境参数。
+ * 返回：包含合并结果与校验错误的配置结果。
+ */
 function loadSerializedConfig(workspaceConfigs, ideSettings, ideType, overrideConfigJson, ide) {
     let config = overrideConfigJson;
     if (!config) {
@@ -284,9 +299,6 @@ async function intermediateToFinalConfig({ config, ide, ideSettings, ideInfo, un
                 }
             }
         }
-        if (ideInfo.ideType === "vscode") {
-            return new TransformersJsEmbeddingsProvider();
-        }
         return null;
     }
     const newEmbedder = getEmbeddingsILLM(config.embeddingsProvider);
@@ -435,11 +447,6 @@ async function intermediateToFinalConfig({ config, ide, ideSettings, ideInfo, un
                 message: `experimental.modelRoles.applyCodeBlock model title ${inlineEditModel} not found in models array`,
             });
         }
-    }
-    // Add transformers JS to the embed models list if not already added
-    if (ideInfo.ideType === "vscode" &&
-        !continueConfig.modelsByRole.embed.find((m) => m.providerName === "transformers.js")) {
-        continueConfig.modelsByRole.embed.push(new TransformersJsEmbeddingsProvider());
     }
     return { config: continueConfig, errors };
 }

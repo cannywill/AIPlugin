@@ -1,6 +1,9 @@
 import {
   ArrowLeftIcon,
   ChatBubbleOvalLeftIcon,
+  Cog6ToothIcon,
+  PlusIcon,
+  QueueListIcon,
 } from "@heroicons/react/24/outline";
 import { Editor, JSONContent } from "@tiptap/react";
 import { ChatHistoryItem, InputModifiers } from "core";
@@ -46,6 +49,7 @@ import { isJetBrains, isMetaEquivalentKeyPressed } from "../../util";
 import { ToolCallDiv } from "./ToolCallDiv";
 
 import { useStore } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { BackgroundModeView } from "../../components/BackgroundMode/BackgroundModeView";
 import { CliInstallBanner } from "../../components/CliInstallBanner";
 import FeedbackDialog from "../../components/dialogs/FeedbackDialog";
@@ -56,9 +60,12 @@ import { resolveEditorContent } from "../../components/mainInput/TipTapEditor/ut
 import { setDialogMessage, setShowDialog } from "../../redux/slices/uiSlice";
 import { RootState } from "../../redux/store";
 import { cancelStream } from "../../redux/thunks/cancelStream";
+import { saveCurrentSession } from "../../redux/thunks/session";
 import { getLocalStorage, setLocalStorage } from "../../util/localStorage";
+import { CONFIG_ROUTES } from "../../util/navigation";
 import { EmptyChatBody } from "./EmptyChatBody";
 import { ExploreDialogWatcher } from "./ExploreDialogWatcher";
+import HeaderButtonWithToolTip from "../../components/gui/HeaderButtonWithToolTip";
 import { useAutoScroll } from "./useAutoScroll";
 
 // Helper function to find the index of the latest conversation summary
@@ -108,6 +115,7 @@ function fallbackRender({ error, resetErrorBoundary }: any) {
 
 export function Chat() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const ideMessenger = useContext(IdeMessengerContext);
   const reduxStore = useStore<RootState>();
   const onboardingCard = useOnboardingCard();
@@ -460,10 +468,45 @@ export function Chat() {
 
   const showScrollbar = showChatScrollbar ?? window.innerHeight > 5000;
 
+  const handleNewSessionClick = useCallback(async () => {
+    if (isInEdit) {
+      dispatch(newSession());
+      return;
+    }
+    await dispatch(
+      saveCurrentSession({
+        openNewSession: true,
+        generateTitle: true,
+      }),
+    );
+  }, [dispatch, isInEdit]);
+
   return (
     <>
       {!!showSessionTabs && !isInEdit && <TabBar ref={tabsRef} />}
       {widget}
+      <div className="border-command-border mx-2 flex items-center justify-end gap-1 border-0 border-b border-solid pb-1.5 pt-1">
+        <HeaderButtonWithToolTip
+          text="New chat"
+          onClick={() => {
+            void handleNewSessionClick();
+          }}
+        >
+          <PlusIcon className="text-description-muted h-3.5 w-3.5" />
+        </HeaderButtonWithToolTip>
+        <HeaderButtonWithToolTip
+          text="History"
+          onClick={() => navigate("/history")}
+        >
+          <QueueListIcon className="text-description-muted h-3.5 w-3.5" />
+        </HeaderButtonWithToolTip>
+        <HeaderButtonWithToolTip
+          text="Settings"
+          onClick={() => navigate(CONFIG_ROUTES.SETTINGS)}
+        >
+          <Cog6ToothIcon className="text-description-muted h-3.5 w-3.5" />
+        </HeaderButtonWithToolTip>
+      </div>
 
       <StepsDiv
         ref={stepsDivRef}

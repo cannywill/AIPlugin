@@ -3,6 +3,8 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 
+import '../history/continue_history_sqlite_manager.dart';
+import '../history/continue_history_store.dart';
 import '../host/host_adapter.dart';
 import '../protocol/continue_message.dart';
 import '../protocol/continue_routes.dart';
@@ -26,13 +28,16 @@ class ContinueShellController extends ChangeNotifier {
     required this.coreTransport,
     required this.hostAdapter,
     required this.shellPort,
-  });
+    ContinueHistoryStore? historyStore,
+  }) : historyStore =
+           historyStore ?? ContinueHistorySqliteManager.getInstance();
 
   static const String editModeStreamId = 'edit-mode';
 
   final CoreTransport coreTransport;
   final HostAdapter hostAdapter;
   final ContinueShellPort shellPort;
+  final ContinueHistoryStore historyStore;
 
   final Set<String> _pendingShellResponseIds = <String>{};
   final Map<String, Completer<Map<String, Object?>>> _pendingCoreResponses =
@@ -56,6 +61,8 @@ class ContinueShellController extends ChangeNotifier {
     _setStatus('starting');
     _logStage('start/init');
 
+    await historyStore.init();
+    _logStage('start/historyStore.ready');
     await coreTransport.start();
     _logStage('start/coreTransport.ready');
     await shellPort.load();
@@ -124,6 +131,24 @@ class ContinueShellController extends ChangeNotifier {
   /// 说明：session 分享别名、apply/diff 生命周期、edit 相关兜底和 background agent 流都放在这里，避免把宿主和 Core 的边界搅乱。
   Future<bool> _handleShellManagedMessage(ContinueMessage message) async {
     switch (message.messageType) {
+      case 'history/list':
+        await _handleHistoryList(message);
+        return true;
+      case 'history/load':
+        await _handleHistoryLoad(message);
+        return true;
+      case 'history/loadRemote':
+        await _handleHistoryLoadRemote(message);
+        return true;
+      case 'history/save':
+        await _handleHistorySave(message);
+        return true;
+      case 'history/delete':
+        await _handleHistoryDelete(message);
+        return true;
+      case 'history/clear':
+        await _handleHistoryClear(message);
+        return true;
       case 'session/share':
         await coreTransport.send(
           ContinueMessage(
@@ -165,6 +190,98 @@ class ContinueShellController extends ChangeNotifier {
         return true;
     }
     return false;
+  }
+
+  Future<void> _handleHistoryList(ContinueMessage message) async {
+    try {
+      final payload = (message.data as Map?)?.cast<String, Object?>();
+      final content = await historyStore.list(
+        limit: (payload?['limit'] as num?)?.toInt(),
+        offset: (payload?['offset'] as num?)?.toInt(),
+        workspaceDirectory: payload?['workspaceDirectory'] as String?,
+      );
+      await _respondToShellRequest(
+        message,
+        content: content,
+        status: 'success',
+      );
+    } catch (error) {
+      await _respondToShellRequest(message, status: 'error', error: '$error');
+    }
+  }
+
+  Future<void> _handleHistoryLoad(ContinueMessage message) async {
+    try {
+      final payload = (message.data as Map?)?.cast<String, Object?>();
+      final sessionId = payload?['id'] as String?;
+      if (sessionId == null || sessionId.isEmpty) {
+        throw ArgumentError('history/load requires a non-empty id.');
+      }
+      final content = await historyStore.load(sessionId);
+      await _respondToShellRequest(
+        message,
+        content: content,
+        status: 'success',
+      );
+    } catch (error) {
+      await _respondToShellRequest(message, status: 'error', error: '$error');
+    }
+  }
+
+  Future<void> _handleHistoryLoadRemote(ContinueMessage message) async {
+    try {
+      final payload = (message.data as Map?)?.cast<String, Object?>();
+      final remoteId = payload?['remoteId'] as String?;
+      if (remoteId == null || remoteId.isEmpty) {
+        throw ArgumentError(
+          'history/loadRemote requires a non-empty remoteId.',
+        );
+      }
+      final content = await historyStore.loadRemote(remoteId);
+      await _respondToShellRequest(
+        message,
+        content: content,
+        status: 'success',
+      );
+    } catch (error) {
+      await _respondToShellRequest(message, status: 'error', error: '$error');
+    }
+  }
+
+  Future<void> _handleHistorySave(ContinueMessage message) async {
+    try {
+      final payload = (message.data as Map?)?.cast<String, Object?>();
+      if (payload == null) {
+        throw ArgumentError('history/save requires a session payload.');
+      }
+      await historyStore.save(payload);
+      await _respondToShellRequest(message, content: null, status: 'success');
+    } catch (error) {
+      await _respondToShellRequest(message, status: 'error', error: '$error');
+    }
+  }
+
+  Future<void> _handleHistoryDelete(ContinueMessage message) async {
+    try {
+      final payload = (message.data as Map?)?.cast<String, Object?>();
+      final sessionId = payload?['id'] as String?;
+      if (sessionId == null || sessionId.isEmpty) {
+        throw ArgumentError('history/delete requires a non-empty id.');
+      }
+      await historyStore.delete(sessionId);
+      await _respondToShellRequest(message, content: null, status: 'success');
+    } catch (error) {
+      await _respondToShellRequest(message, status: 'error', error: '$error');
+    }
+  }
+
+  Future<void> _handleHistoryClear(ContinueMessage message) async {
+    try {
+      await historyStore.clear();
+      await _respondToShellRequest(message, content: null, status: 'success');
+    } catch (error) {
+      await _respondToShellRequest(message, status: 'error', error: '$error');
+    }
   }
 
   /// 功能：执行一次 applyToFile，并把 Continue GUI 需要的状态流转回推给 WebView。

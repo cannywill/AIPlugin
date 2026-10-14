@@ -1,3 +1,8 @@
+/**
+ * 文件类型：服务客户端
+ * 文件作用：对接 Continue 控制面 API。
+ * 主要职责：提供鉴权、结算与功能开关相关接口。
+ */
 import { ConfigJson } from "@continuedev/config-types";
 import { AssistantUnrolled, ConfigResult, FQSN, FullSlug, Policy, SecretResult } from "@continuedev/config-yaml";
 import { OrganizationDescription } from "../config/ProfileLifecycleManager.js";
@@ -77,11 +82,10 @@ export declare class ControlPlaneClient {
     getPolicy(): Promise<PolicyResponse | null>;
     getCreditStatus(): Promise<CreditStatus | null>;
     /**
-     * JetBrains does not support deep links, so we only check for `vsCodeUriScheme`
-     * @param vsCodeUriScheme
-     * @returns
+     * 功能：获取 Models Add-On 的结算链接。
+     * 返回：成功时返回包含链接的对象，否则返回 null。
      */
-    getModelsAddOnCheckoutUrl(vsCodeUriScheme?: string): Promise<{
+    getModelsAddOnCheckoutUrl(): Promise<{
         url: string;
     } | null>;
     /**

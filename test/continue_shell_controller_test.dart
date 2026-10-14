@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app_ai_plugin/src/app/continue_shell_controller.dart';
+import 'package:app_ai_plugin/src/history/continue_history_store.dart';
 import 'package:app_ai_plugin/src/host/host_adapter.dart';
 import 'package:app_ai_plugin/src/protocol/continue_message.dart';
 import 'package:app_ai_plugin/src/transport/core_transport.dart';
@@ -10,6 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// 文件作用：覆盖 ContinueShellController 在 Flutter 壳层里兜底的 apply/diff、edit 与 background agent 生命周期。
 /// 主要职责：验证 GUI 关键按钮对应的宿主兼容逻辑会正确改文件、回推事件，并维护本地 background agent 状态。
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     'applyToFile on existing file emits streaming and done states',
     () async {
@@ -18,7 +21,7 @@ void main() {
         files: {'/tmp/demo.dart': 'old content'},
         currentFilePath: '/tmp/demo.dart',
       );
-      final controller = ContinueShellController(
+      final controller = _createController(
         coreTransport: _FakeCoreTransport(),
         hostAdapter: hostAdapter,
         shellPort: shellPort,
@@ -69,7 +72,7 @@ void main() {
         files: {'/tmp/demo.dart': 'before edit'},
         currentFilePath: '/tmp/demo.dart',
       );
-      final controller = ContinueShellController(
+      final controller = _createController(
         coreTransport: _FakeCoreTransport(),
         hostAdapter: hostAdapter,
         shellPort: shellPort,
@@ -122,7 +125,7 @@ void main() {
         files: {'/tmp/demo.dart': 'old value'},
         currentFilePath: '/tmp/demo.dart',
       );
-      final controller = ContinueShellController(
+      final controller = _createController(
         coreTransport: _FakeCoreTransport(),
         hostAdapter: hostAdapter,
         shellPort: shellPort,
@@ -173,7 +176,7 @@ void main() {
       files: {'/tmp/insert.dart': 'hello'},
       currentFilePath: '/tmp/insert.dart',
     );
-    final controller = ContinueShellController(
+    final controller = _createController(
       coreTransport: _FakeCoreTransport(),
       hostAdapter: hostAdapter,
       shellPort: shellPort,
@@ -206,7 +209,7 @@ void main() {
         files: {'/tmp/edit.dart': 'line 1\nline 2'},
         currentFilePath: '/tmp/edit.dart',
       );
-      final controller = ContinueShellController(
+      final controller = _createController(
         coreTransport: _FakeCoreTransport(),
         hostAdapter: hostAdapter,
         shellPort: shellPort,
@@ -244,7 +247,7 @@ void main() {
         files: {'/tmp/edit.dart': 'prefix\nold value\nsuffix'},
         currentFilePath: '/tmp/edit.dart',
       );
-      final controller = ContinueShellController(
+      final controller = _createController(
         coreTransport: _FakeCoreTransport(
           handlers: {'llm/complete': (message) => 'new value'},
         ),
@@ -304,7 +307,7 @@ void main() {
       files: {'/tmp/demo.dart': 'hello'},
       currentFilePath: '/tmp/demo.dart',
     );
-    final controller = ContinueShellController(
+    final controller = _createController(
       coreTransport: _FakeCoreTransport(),
       hostAdapter: hostAdapter,
       shellPort: shellPort,
@@ -354,7 +357,7 @@ void main() {
 
   test('controller reverse helpers emit GUI events', () async {
     final shellPort = _FakeShellPort();
-    final controller = ContinueShellController(
+    final controller = _createController(
       coreTransport: _FakeCoreTransport(),
       hostAdapter: _FakeHostAdapter(files: const {}),
       shellPort: shellPort,
@@ -392,6 +395,121 @@ void main() {
     await controller.shutdown();
   });
 
+  test('history routes are handled by the Flutter history store', () async {
+    final shellPort = _FakeShellPort();
+    final historyStore = _FakeHistoryStore();
+    final controller = _createController(
+      coreTransport: _FakeCoreTransport(),
+      hostAdapter: _FakeHostAdapter(files: const {}),
+      shellPort: shellPort,
+      historyStore: historyStore,
+    );
+
+    await controller.start();
+    await shellPort.emit(
+      ContinueMessage(
+        messageType: 'history/save',
+        messageId: 'history-save-1',
+        data: {
+          'sessionId': 'session-1',
+          'title': 'Hello Session',
+          'workspaceDirectory': '/tmp/workspace',
+          'history': [
+            {
+              'message': {'role': 'user', 'content': 'hello'},
+            },
+            {
+              'message': {'role': 'assistant', 'content': 'world'},
+            },
+          ],
+        },
+      ),
+    );
+
+    await shellPort.emit(
+      ContinueMessage(
+        messageType: 'history/list',
+        messageId: 'history-list-1',
+        data: {'limit': 10},
+      ),
+    );
+    final listResponse = shellPort.outgoing.lastWhere(
+      (message) => message.messageId == 'history-list-1',
+    );
+    expect((listResponse.data as Map<String, Object?>)['status'], 'success');
+    expect(
+      ((listResponse.data as Map<String, Object?>)['content'] as List<Object?>)
+          .single,
+      containsPair('sessionId', 'session-1'),
+    );
+
+    await shellPort.emit(
+      ContinueMessage(
+        messageType: 'history/load',
+        messageId: 'history-load-1',
+        data: {'id': 'session-1'},
+      ),
+    );
+    final loadResponse = shellPort.outgoing.lastWhere(
+      (message) => message.messageId == 'history-load-1',
+    );
+    final loadedSession =
+        (loadResponse.data as Map<String, Object?>)['content']
+            as Map<String, Object?>;
+    expect(loadedSession['title'], 'Hello Session');
+    expect(loadedSession['workspaceDirectory'], '/tmp/workspace');
+
+    await shellPort.emit(
+      ContinueMessage(
+        messageType: 'history/delete',
+        messageId: 'history-delete-1',
+        data: {'id': 'session-1'},
+      ),
+    );
+    expect(historyStore.sessions, isEmpty);
+
+    await controller.shutdown();
+  });
+
+  test('history clear removes all saved sessions', () async {
+    final shellPort = _FakeShellPort();
+    final historyStore = _FakeHistoryStore()
+      ..sessions['session-a'] = <String, Object?>{
+        'sessionId': 'session-a',
+        'title': 'A',
+        'workspaceDirectory': '/tmp/workspace',
+        'history': const <Object?>[],
+      }
+      ..sessions['session-b'] = <String, Object?>{
+        'sessionId': 'session-b',
+        'title': 'B',
+        'workspaceDirectory': '/tmp/workspace',
+        'history': const <Object?>[],
+      };
+    final controller = _createController(
+      coreTransport: _FakeCoreTransport(),
+      hostAdapter: _FakeHostAdapter(files: const {}),
+      shellPort: shellPort,
+      historyStore: historyStore,
+    );
+
+    await controller.start();
+    await shellPort.emit(
+      ContinueMessage(
+        messageType: 'history/clear',
+        messageId: 'history-clear-1',
+        data: null,
+      ),
+    );
+
+    expect(historyStore.sessions, isEmpty);
+    final response = shellPort.outgoing.last;
+    expect(response.messageType, 'history/clear');
+    expect((response.data as Map<String, Object?>)['status'], 'success');
+
+    await controller.shutdown();
+  });
+
   test('createBackgroundAgent is listed and can be opened locally', () async {
     final shellPort = _FakeShellPort();
     final hostAdapter = _FakeHostAdapter(
@@ -401,7 +519,7 @@ void main() {
       repoName: 'https://github.com/example/repo',
       branch: 'feature/agent',
     );
-    final controller = ContinueShellController(
+    final controller = _createController(
       coreTransport: _FakeCoreTransport(),
       hostAdapter: hostAdapter,
       shellPort: shellPort,
@@ -459,6 +577,20 @@ void main() {
 
     await controller.shutdown();
   });
+}
+
+ContinueShellController _createController({
+  required CoreTransport coreTransport,
+  required HostAdapter hostAdapter,
+  required ContinueShellPort shellPort,
+  ContinueHistoryStore? historyStore,
+}) {
+  return ContinueShellController(
+    coreTransport: coreTransport,
+    hostAdapter: hostAdapter,
+    shellPort: shellPort,
+    historyStore: historyStore ?? _FakeHistoryStore(),
+  );
 }
 
 class _FakeCoreTransport implements CoreTransport {
@@ -531,6 +663,94 @@ class _FakeShellPort extends ContinueShellPort {
   @override
   Future<void> dispose() async {
     await _incoming.close();
+  }
+}
+
+class _FakeHistoryStore implements ContinueHistoryStore {
+  final Map<String, Map<String, Object?>> sessions =
+      <String, Map<String, Object?>>{};
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> clear() async {
+    sessions.clear();
+  }
+
+  @override
+  Future<void> delete(String sessionId) async {
+    sessions.remove(sessionId);
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> list({
+    int? limit,
+    int? offset,
+    String? workspaceDirectory,
+  }) async {
+    var items = sessions.values
+        .where((session) {
+          if (workspaceDirectory == null || workspaceDirectory.isEmpty) {
+            return true;
+          }
+          return (session['workspaceDirectory'] as String?)?.toLowerCase() ==
+              workspaceDirectory.toLowerCase();
+        })
+        .map((session) {
+          final history = (session['history'] as List?) ?? const <Object?>[];
+          final messageCount = history.where((item) {
+            if (item is! Map) {
+              return false;
+            }
+            final message = item['message'];
+            return message is Map && message['role'] == 'assistant';
+          }).length;
+          return <String, Object?>{
+            'sessionId': session['sessionId'],
+            'title': session['title'],
+            'dateCreated': '2026-04-29T00:00:00.000Z',
+            'workspaceDirectory': session['workspaceDirectory'],
+            'messageCount': messageCount,
+          };
+        })
+        .toList(growable: false);
+
+    final start = offset ?? 0;
+    final end = limit == null
+        ? items.length
+        : (start + limit).clamp(0, items.length);
+    if (start >= items.length) {
+      return const <Map<String, Object?>>[];
+    }
+    items = items.sublist(start, end);
+    return items;
+  }
+
+  @override
+  Future<Map<String, Object?>> load(String sessionId) async {
+    return sessions[sessionId] ??
+        <String, Object?>{
+          'sessionId': sessionId,
+          'title': 'New Session',
+          'workspaceDirectory': '',
+          'history': const <Object?>[],
+        };
+  }
+
+  @override
+  Future<Map<String, Object?>> loadRemote(String remoteId) async {
+    return <String, Object?>{
+      'sessionId': remoteId,
+      'title': 'Remote Session',
+      'workspaceDirectory': '',
+      'history': const <Object?>[],
+    };
+  }
+
+  @override
+  Future<void> save(Map<String, Object?> session) async {
+    sessions[session['sessionId'] as String] = session;
   }
 }
 

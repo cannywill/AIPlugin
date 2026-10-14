@@ -13,7 +13,12 @@ import TerminalContextProvider from "../context/providers/TerminalContextProvide
 
     NOTE the MCPContextProvider is added in doLoadConfig if any resources are present
 */
-export function loadConfigContextProviders(configContext, hasDocs, ideType) {
+/**
+ * 功能：根据配置与默认列表生成上下文提供者集合。
+ * 入参：configContext 为配置项，hasDocs 表示是否启用 docs，ideType 为当前 IDE 类型。
+ * 返回：提供者列表与配置错误集合。
+ */
+export function loadConfigContextProviders(configContext, hasDocs, _ideType) {
     const providers = [];
     const errors = [];
     const defaultProviders = [
@@ -51,16 +56,8 @@ export function loadConfigContextProviders(configContext, hasDocs, ideType) {
     if (hasDocs && !providers?.some((cp) => cp.description.title === "docs")) {
         providers.push(new DocsContextProvider({}));
     }
-    // @problems and @terminal are not supported in jetbrains
-    const filteredProviders = providers.filter((pv) => {
-        if (ideType === "jetbrains") {
-            return (pv.description.title !== TerminalContextProvider.description.title &&
-                pv.description.title !== ProblemsContextProvider.description.title);
-        }
-        return true;
-    });
     return {
-        providers: filteredProviders,
+        providers,
         errors,
     };
 }

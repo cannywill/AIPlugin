@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'bailian_models.dart';
+import 'params.dart';
 
 const _continueGuiUrl = String.fromEnvironment('CONTINUE_GUI_URL');
 const _continueGuiDist = String.fromEnvironment('CONTINUE_GUI_DIST');
@@ -469,6 +470,21 @@ class _MyAppState extends State<MyApp> {
       return _ContinueGuiSetupGuide(hasBinaryBridge: _hasBinaryBridge);
     }
 
+    // Params.isDebug 控制底部 Continue Runtime Log 面板是否显示。
+    // 关闭时只渲染纯 Continue GUI；联调时通过 --dart-define=APP_AI_DEBUG=true 打开。
+    final webView = ContinueGuiWebView(
+      source: source,
+      shellPort: _continueGuiShellPort,
+      placeholder: const ColoredBox(
+        color: Colors.white,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
+
+    if (!Params.isDebug) {
+      return webView;
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final debugPanelHeight = constraints.maxHeight >= 620 ? 220.0 : 120.0;
@@ -476,16 +492,7 @@ class _MyAppState extends State<MyApp> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: ContinueGuiWebView(
-                source: source,
-                shellPort: _continueGuiShellPort,
-                placeholder: const ColoredBox(
-                  color: Colors.white,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ),
-            ),
+            Expanded(child: webView),
             const SizedBox(height: 8),
             SizedBox(
               height: debugPanelHeight,
@@ -625,10 +632,10 @@ class _MyAppState extends State<MyApp> {
   }
 
   // 处理 Continue GUI 的 llm/streamChat，改为 Flutter 直连百炼。
-  Future<String> _handleGuiStreamChat(
+  Stream<String> _handleGuiStreamChat(
     ContinueMessage message,
     String? prompt,
-  ) async {
+  ) async* {
     _pushRuntimeLog(
       'continue.streamChat.in',
       'messageType=${message.messageType}, prompt="${(prompt ?? '').trim()}"',
@@ -644,17 +651,21 @@ class _MyAppState extends State<MyApp> {
     }
     if (chatMessages.isEmpty) {
       _pushRuntimeLog('continue.streamChat.skip', 'No prompt provided');
-      return 'No prompt provided.';
+      yield 'No prompt provided.';
+      return;
     }
-    final result = await _requestOpenAiChat(
+    var streamedLength = 0;
+    await for (final chunk in _requestOpenAiChatStream(
       messages: chatMessages,
       modelEntry: modelEntry,
-    );
+    )) {
+      streamedLength += chunk.length;
+      yield chunk;
+    }
     _pushRuntimeLog(
       'continue.streamChat.out',
-      'responseLength=${result.length}',
+      'responseLength=$streamedLength',
     );
-    return result;
   }
 
   // 处理 Flutter 顶部聊天输入框。
@@ -674,6 +685,25 @@ class _MyAppState extends State<MyApp> {
     required List<Map<String, String>> messages,
     BailianModelEntry? modelEntry,
   }) async {
+    final buffer = StringBuffer();
+    await for (final chunk in _requestOpenAiChatStream(
+      messages: messages,
+      modelEntry: modelEntry,
+    )) {
+      buffer.write(chunk);
+    }
+    final text = buffer.toString().trim();
+    if (text.isEmpty) {
+      _pushRuntimeLog('openai.response.empty', 'No text content');
+      throw StateError('OpenAI returned empty content.');
+    }
+    return text;
+  }
+
+  Stream<String> _requestOpenAiChatStream({
+    required List<Map<String, String>> messages,
+    BailianModelEntry? modelEntry,
+  }) async* {
     final entry = modelEntry ?? _selectedModel;
     final entryKey = entry.apiKey.trim();
     final overrideKey = _storedOpenAiApiKey?.trim() ?? '';
@@ -687,6 +717,7 @@ class _MyAppState extends State<MyApp> {
       'model': entry.model,
       'messages': messages,
       'temperature': 0.7,
+      'stream': true,
     };
 
     developer.log(
@@ -698,56 +729,312 @@ class _MyAppState extends State<MyApp> {
       'model=${entry.model}, messageCount=${messages.length}',
     );
 
-    final response = await http
-        .post(
-          uri,
-          headers: <String, String>{
-            'Authorization': 'Bearer $apiKey',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(requestBody),
-        )
-        .timeout(const Duration(seconds: 90));
+    final request = http.Request('POST', uri)
+      ..headers.addAll(<String, String>{
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      })
+      ..body = jsonEncode(requestBody);
+
+    final response = await request.send().timeout(const Duration(seconds: 90));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = await response.stream.bytesToString();
       _pushRuntimeLog(
         'llm.response.error',
-        'status=${response.statusCode}, body=${response.body}',
+        'status=${response.statusCode}, body=$body',
       );
-      throw StateError('LLM HTTP ${response.statusCode}: ${response.body}');
+      throw StateError('LLM HTTP ${response.statusCode}: $body');
     }
 
-    final decoded = jsonDecode(response.body);
+    final eventDataLines = <String>[];
+    var sawAnyText = false;
+    var assembledText = '';
+    await for (final rawLine
+        in response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())) {
+      final line = rawLine.trimRight();
+      if (line.isEmpty) {
+        final textChunk = _parseOpenAiStreamEvent(eventDataLines);
+        if (textChunk == null) {
+          continue;
+        }
+        _pushRuntimeLog(
+          'llm.stream.chunk.parsed',
+          _previewLogText(
+            'model=${entry.model}, parsed="${_singleLinePreview(textChunk)}"',
+          ),
+        );
+        final normalizedChunk = _coerceToIncrementalChunk(
+          incomingText: textChunk,
+          existingText: assembledText,
+        );
+        _pushRuntimeLog(
+          'llm.stream.chunk.normalized',
+          _previewLogText(
+            'model=${entry.model}, normalized="${_singleLinePreview(normalizedChunk)}", assembledBefore=${assembledText.length}',
+          ),
+        );
+        if (normalizedChunk.isEmpty) {
+          _pushRuntimeLog(
+            'llm.stream.chunk.skipped',
+            _previewLogText(
+              'model=${entry.model}, reason=emptyAfterNormalization, parsed="${_singleLinePreview(textChunk)}"',
+            ),
+          );
+          continue;
+        }
+        sawAnyText = true;
+        assembledText += normalizedChunk;
+        _pushRuntimeLog(
+          'llm.stream.chunk.yield',
+          _previewLogText(
+            'model=${entry.model}, yielded="${_singleLinePreview(normalizedChunk)}", assembledAfter=${assembledText.length}',
+          ),
+        );
+        yield normalizedChunk;
+        continue;
+      }
+      if (line.startsWith(':')) {
+        continue;
+      }
+      if (line.startsWith('data:')) {
+        eventDataLines.add(line.substring(5).trimLeft());
+      }
+    }
+
+    final tailChunk = _parseOpenAiStreamEvent(eventDataLines);
+    if (tailChunk != null) {
+      _pushRuntimeLog(
+        'llm.stream.tail.parsed',
+        _previewLogText(
+          'model=${entry.model}, parsed="${_singleLinePreview(tailChunk)}"',
+        ),
+      );
+      final normalizedChunk = _coerceToIncrementalChunk(
+        incomingText: tailChunk,
+        existingText: assembledText,
+      );
+      _pushRuntimeLog(
+        'llm.stream.tail.normalized',
+        _previewLogText(
+          'model=${entry.model}, normalized="${_singleLinePreview(normalizedChunk)}", assembledBefore=${assembledText.length}',
+        ),
+      );
+      if (normalizedChunk.isNotEmpty) {
+        sawAnyText = true;
+        assembledText += normalizedChunk;
+        _pushRuntimeLog(
+          'llm.stream.tail.yield',
+          _previewLogText(
+            'model=${entry.model}, yielded="${_singleLinePreview(normalizedChunk)}", assembledAfter=${assembledText.length}',
+          ),
+        );
+        yield normalizedChunk;
+      }
+    }
+
+    if (!sawAnyText) {
+      _pushRuntimeLog('openai.response.empty', 'No streamed text content');
+      throw StateError('OpenAI returned empty streamed content.');
+    }
+    _pushRuntimeLog(
+      'openai.response.ok',
+      'status=${response.statusCode}, streamed=true',
+    );
+  }
+
+  String? _parseOpenAiStreamEvent(List<String> eventDataLines) {
+    if (eventDataLines.isEmpty) {
+      return null;
+    }
+    final payload = eventDataLines.join('\n').trim();
+    eventDataLines.clear();
+    if (payload.isEmpty || payload == '[DONE]') {
+      _pushRuntimeLog('llm.stream.event.skip', 'payload=$payload');
+      return null;
+    }
+    _pushRuntimeLog(
+      'llm.stream.event.raw',
+      _previewLogText(_singleLinePreview(payload, maxLength: 240)),
+    );
+
+    final decoded = jsonDecode(payload);
     if (decoded is! Map<String, dynamic>) {
-      throw StateError('Invalid OpenAI response shape.');
+      throw StateError('Invalid streamed OpenAI response shape.');
+    }
+    if (decoded['error'] != null) {
+      throw StateError('OpenAI stream error: ${decoded['error']}');
     }
 
     final choices = decoded['choices'];
     if (choices is! List || choices.isEmpty) {
-      throw StateError('OpenAI response has no choices.');
+      return null;
     }
 
     final first = choices.first;
     if (first is! Map<String, dynamic>) {
-      throw StateError('OpenAI first choice is invalid.');
+      return null;
+    }
+
+    final delta = first['delta'];
+    if (delta is Map<String, dynamic>) {
+      final text = _extractTextContent(delta['content']);
+      if (text != null && text.isNotEmpty) {
+        final collapsed = _collapseImmediateDuplicatePhrases(text);
+        _logDuplicateCollapse(
+          source: 'delta',
+          original: text,
+          collapsed: collapsed,
+        );
+        return collapsed;
+      }
     }
 
     final message = first['message'];
-    if (message is! Map<String, dynamic>) {
-      throw StateError('OpenAI message payload is invalid.');
+    if (message is Map<String, dynamic>) {
+      final text = _extractTextContent(message['content']);
+      if (text != null && text.isNotEmpty) {
+        final collapsed = _collapseImmediateDuplicatePhrases(text);
+        _logDuplicateCollapse(
+          source: 'message',
+          original: text,
+          collapsed: collapsed,
+        );
+        return collapsed;
+      }
     }
 
-    final content = message['content'];
-    final text = _extractTextContent(content);
-    if (text == null || text.trim().isEmpty) {
-      _pushRuntimeLog('openai.response.empty', 'No text content');
-      throw StateError('OpenAI returned empty content.');
+    _pushRuntimeLog(
+      'llm.stream.event.noText',
+      _previewLogText(_singleLinePreview(payload, maxLength: 160)),
+    );
+    return null;
+  }
+
+  String _coerceToIncrementalChunk({
+    required String incomingText,
+    required String existingText,
+  }) {
+    if (incomingText.isEmpty) {
+      return '';
+    }
+    if (existingText.isEmpty) {
+      return incomingText;
+    }
+
+    if (incomingText.startsWith(existingText)) {
+      return incomingText.substring(existingText.length);
+    }
+
+    if (existingText.endsWith(incomingText)) {
+      return '';
+    }
+
+    final maxOverlap = existingText.length < incomingText.length
+        ? existingText.length
+        : incomingText.length;
+    for (var overlap = maxOverlap; overlap > 0; overlap--) {
+      if (existingText.endsWith(incomingText.substring(0, overlap))) {
+        return incomingText.substring(overlap);
+      }
+    }
+
+    return incomingText;
+  }
+
+  void _logDuplicateCollapse({
+    required String source,
+    required String original,
+    required String collapsed,
+  }) {
+    if (original == collapsed) {
+      _pushRuntimeLog(
+        'llm.stream.text.clean',
+        _previewLogText(
+          'source=$source, unchanged="${_singleLinePreview(original)}"',
+        ),
+      );
+      return;
     }
     _pushRuntimeLog(
-      'openai.response.ok',
-      'status=${response.statusCode}, textLength=${text.trim().length}',
+      'llm.stream.text.dedup',
+      _previewLogText(
+        'source=$source, before="${_singleLinePreview(original)}", after="${_singleLinePreview(collapsed)}"',
+      ),
     );
-    return text.trim();
+  }
+
+  String _collapseImmediateDuplicatePhrases(String text) {
+    if (text.length < 4) {
+      return text;
+    }
+
+    var result = text;
+    var changed = true;
+    while (changed) {
+      changed = false;
+      final maxUnitLength = result.length ~/ 2;
+      final boundedMax = maxUnitLength > 24 ? 24 : maxUnitLength;
+      for (var unitLength = boundedMax; unitLength >= 2; unitLength--) {
+        final buffer = StringBuffer();
+        var cursor = 0;
+        var localChanged = false;
+
+        while (cursor < result.length) {
+          if (cursor + unitLength * 2 <= result.length) {
+            final unit = result.substring(cursor, cursor + unitLength);
+            var repeatCount = 1;
+            while (cursor + unitLength * (repeatCount + 1) <= result.length &&
+                result.substring(
+                      cursor + unitLength * repeatCount,
+                      cursor + unitLength * (repeatCount + 1),
+                    ) ==
+                    unit) {
+              repeatCount++;
+            }
+
+            if (repeatCount > 1) {
+              buffer.write(unit);
+              cursor += unitLength * repeatCount;
+              localChanged = true;
+              continue;
+            }
+          }
+
+          buffer.write(result[cursor]);
+          cursor++;
+        }
+
+        if (localChanged) {
+          result = buffer.toString();
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  String _previewLogText(String text, {int maxLength = 280}) {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return '${text.substring(0, maxLength)}...';
+  }
+
+  String _singleLinePreview(String text, {int maxLength = 120}) {
+    final normalized = text
+        .replaceAll('\n', r'\n')
+        .replaceAll('\r', r'\r')
+        .trim();
+    if (normalized.length <= maxLength) {
+      return normalized;
+    }
+    return '${normalized.substring(0, maxLength)}...';
   }
 
   // 页面白底调试日志：记录 bridge 与 LLM 关键环节，便于可视化排查。
@@ -763,8 +1050,8 @@ class _MyAppState extends State<MyApp> {
     }
     setState(() {
       _runtimeDebugLines.add(line);
-      if (_runtimeDebugLines.length > 120) {
-        _runtimeDebugLines.removeRange(0, _runtimeDebugLines.length - 120);
+      if (_runtimeDebugLines.length > 300) {
+        _runtimeDebugLines.removeRange(0, _runtimeDebugLines.length - 300);
       }
     });
   }
@@ -851,11 +1138,26 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF157E69)),
+      useMaterial3: true,
+    );
+
+    // Params.isDebug 为 false 时（默认）只渲染 Continue GUI 本体，
+    // 隐藏左侧 Sessions、中间 Flutter chat 时间线、底部输入框等示例外壳。
+    // 联调时 --dart-define=APP_AI_DEBUG=true 才显示完整 AppAiShell。
+    if (!Params.isDebug) {
+      return MaterialApp(
+        theme: theme,
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(child: _buildReusePane()),
+        ),
+      );
+    }
+
     return MaterialApp(
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF157E69)),
-        useMaterial3: true,
-      ),
+      theme: theme,
       home: AppAiShell(
         sessions: _sessions,
         messages: _messages,

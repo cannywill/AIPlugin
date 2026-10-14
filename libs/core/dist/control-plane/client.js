@@ -181,11 +181,10 @@ export class ControlPlaneClient {
         }
     }
     /**
-     * JetBrains does not support deep links, so we only check for `vsCodeUriScheme`
-     * @param vsCodeUriScheme
-     * @returns
+     * 功能：获取 Models Add-On 的结算链接。
+     * 返回：成功时返回包含链接的对象，否则返回 null。
      */
-    async getModelsAddOnCheckoutUrl(vsCodeUriScheme) {
+    async getModelsAddOnCheckoutUrl() {
         if (!(await this.isSignedIn())) {
             return null;
         }
@@ -194,9 +193,6 @@ export class ControlPlaneClient {
                 // LocalProfileLoader ID
                 profile_id: "local",
             });
-            if (vsCodeUriScheme) {
-                params.set("vscode_uri_scheme", vsCodeUriScheme);
-            }
             const resp = await this.requestAndHandleError(`ide/get-models-add-on-checkout-url?${params.toString()}`, {
                 method: "GET",
             });
@@ -206,7 +202,6 @@ export class ControlPlaneClient {
             // Capture control plane API failures to Sentry
             Logger.error(e, {
                 context: "control_plane_models_checkout_url",
-                vsCodeUriScheme,
             });
             return null;
         }

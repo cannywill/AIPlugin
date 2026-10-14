@@ -1,3 +1,8 @@
+/**
+ * 文件类型：服务
+ * 文件作用：提供 Next Edit 预测与补全能力。
+ * 主要职责：在 Flutter 环境下组织补全链路与展示状态。
+ */
 import { v4 as uuidv4 } from "uuid";
 import OpenAI from "../llm/llms/OpenAI.js";
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../util/parameters.js";
@@ -375,16 +380,10 @@ export class NextEditProvider {
         if (outcome) {
             // Handle NextEditProvider-specific state.
             this.previousCompletions.push(outcome);
-            // Mark as displayed for JetBrains
-            await this._markDisplayedIfJetBrains(helper.input.completionId, outcome);
+            // Flutter 环境下直接记录展示状态
+            this.markDisplayed(helper.input.completionId, outcome);
         }
         return outcome;
-    }
-    async _markDisplayedIfJetBrains(completionId, outcome) {
-        const ideType = (await this.ide.getIdeInfo()).ideType;
-        if (ideType === "jetbrains") {
-            this.markDisplayed(completionId, outcome);
-        }
     }
     /**
      * This is a wrapper around provideInlineCompletionItems.

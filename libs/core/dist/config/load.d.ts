@@ -1,5 +1,10 @@
 import { ConfigResult } from "@continuedev/config-yaml";
 import { BrowserSerializedContinueConfig, ContextProviderWithParams, ContinueConfig, CustomContextProvider, IDE, IdeInfo, IdeSettings, ILLMLogger, SerializedContinueConfig } from "..";
+/**
+ * 功能：读取并解析 config.json，兼容 env 替换。
+ * 入参：filepath 为配置文件路径。
+ * 返回：解析后的序列化配置对象。
+ */
 export declare function resolveSerializedConfig(filepath: string): SerializedContinueConfig;
 export declare function isContextProviderWithParams(contextProvider: CustomContextProvider | ContextProviderWithParams): contextProvider is ContextProviderWithParams;
 declare function finalToBrowserConfig(final: ContinueConfig, ide: IDE): Promise<BrowserSerializedContinueConfig>;

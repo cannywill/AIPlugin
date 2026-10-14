@@ -1,3 +1,8 @@
+/**
+ * 文件类型：协议定义
+ * 文件作用：定义 Flutter WebView 与 Core 之间的消息协议。
+ * 主要职责：裁剪掉非 Flutter 环境的 IDE 通道，仅保留插件需要的协议字段。
+ */
 import { ToIdeFromWebviewOrCoreProtocol } from "./ide";
 import { ToWebviewFromIdeOrCoreProtocol } from "./webview";
 import { AcceptOrRejectDiffPayload, AddToChatPayload, ApplyState, ApplyToFilePayload, ContextItemWithId, HighlightedCodePayload, MessageContent, RangeInFile, RangeInFileWithContents, SetCodeToEditPayload, ShowFilePayload } from "../";
@@ -22,19 +27,6 @@ export type ToIdeFromWebviewProtocol = ToIdeFromWebviewOrCoreProtocol & {
     copyText: [{
         text: string;
     }, void];
-    "jetbrains/isOSREnabled": [undefined, boolean];
-    "jetbrains/onLoad": [
-        undefined,
-        {
-            windowId: string;
-            serverUrl: string;
-            workspacePaths: string[];
-            vscMachineId: string;
-            vscMediaUrl: string;
-        }
-    ];
-    "jetbrains/getColors": [undefined, Record<string, string | null | undefined>];
-    "vscode/openMoveRightMarkdown": [undefined, void];
     acceptDiff: [AcceptOrRejectDiffPayload, void];
     rejectDiff: [AcceptOrRejectDiffPayload, void];
     "edit/sendPrompt": [
@@ -116,8 +108,6 @@ export type ToWebviewFromIdeProtocol = ToWebviewFromIdeOrCoreProtocol & {
     setColors: [{
         [key: string]: string;
     }, void];
-    "jetbrains/editorInsetRefresh": [undefined, void];
-    "jetbrains/isOSREnabled": [boolean, void];
     setupApiKey: [undefined, void];
     setupLocalConfig: [undefined, void];
     incrementFtc: [undefined, void];

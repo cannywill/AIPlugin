@@ -25,11 +25,13 @@ class BailianModelEntry {
 const String _bailianBaseUrl =
     'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
-// 不要把真实的 key 写进源码。运行时通过 --dart-define 注入：
-//   flutter run --dart-define=BAILIAN_API_KEY=sk-xxxxxxxx
-// 留空时 GUI 仍可加载，但请求 LLM 会得到 401。
-const String _bailianApiKey =
-    String.fromEnvironment('BAILIAN_API_KEY', defaultValue: '');
+// Dart 端的 Bailian key —— 与 libs/core/dist/utils/params.ts 中的 BAILIAN_API_KEY
+// 保持一致；修改时请同步两侧。
+// 运行时可用 --dart-define=BAILIAN_API_KEY=sk-xxxxxxxx 临时覆盖（不必改源码）。
+const String _bailianApiKey = String.fromEnvironment(
+  'BAILIAN_API_KEY',
+  defaultValue: 'sk-2019401133d54d8eac0b29030aeabae1',
+);
 
 const List<BailianModelEntry> bailianModels = <BailianModelEntry>[
   BailianModelEntry(

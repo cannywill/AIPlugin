@@ -1,6 +1,8 @@
 export 'app_ai_plugin_platform_interface.dart';
 export 'src/app/continue_shell_controller.dart';
 export 'src/demo/continue_gui_demo.dart';
+export 'src/history/continue_history_sqlite_manager.dart';
+export 'src/history/continue_history_store.dart';
 export 'src/host/channel_backed_host_adapter.dart';
 export 'src/host/host_adapter.dart';
 export 'src/host/local_workspace_host_adapter_stub.dart'

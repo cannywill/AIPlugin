@@ -1,3 +1,8 @@
+/**
+ * 文件类型：工具函数
+ * 文件作用：封装 tree-sitter 语言与查询加载。
+ * 主要职责：为索引与符号解析提供统一的语法树能力。
+ */
 import fs from "node:fs";
 import path from "path";
 import Parser from "web-tree-sitter";
@@ -161,9 +166,7 @@ export async function getQueryForFile(filepath, queryPath) {
     if (!language) {
         return undefined;
     }
-    const sourcePath = path.join(process.env.NODE_ENV === "test" ? process.cwd() : __dirname, "..", ...(process.env.NODE_ENV === "test"
-        ? ["extensions", "vscode", "tree-sitter"]
-        : ["tree-sitter"]), queryPath);
+    const sourcePath = path.join(process.env.NODE_ENV === "test" ? process.cwd() : __dirname, "..", "tree-sitter", queryPath);
     if (!fs.existsSync(sourcePath)) {
         return undefined;
     }

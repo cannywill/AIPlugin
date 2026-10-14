@@ -316,14 +316,6 @@ class _ContinueGuiWebViewState extends State<ContinueGuiWebView> {
         try {
           window.postMessage(payload, "*");
         } catch (_) {}
-        try {
-          const event = new MessageEvent("message", {
-            data: payload,
-            origin: window.location.origin,
-            source: window
-          });
-          window.dispatchEvent(event);
-        } catch (_) {}
       })();
       ''')
         .catchError((Object error) {

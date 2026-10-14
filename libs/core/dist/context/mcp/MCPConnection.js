@@ -1,3 +1,8 @@
+/**
+ * 文件类型：连接管理
+ * 文件作用：管理 MCP 连接、会话与资源列表。
+ * 主要职责：处理 MCP 连接状态、错误与资源同步。
+ */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
@@ -381,7 +386,7 @@ Org-level secrets can only be used for MCP by Background Agents (https://docs.co
                 if (resolved.startsWith("file://")) {
                     return fileURLToPath(resolved);
                 }
-                // Remote URIs (e.g. vscode-remote://ssh-remote+host/path) cannot be
+                // 远程 URI 无法直接解析为本地路径，需保持原样传递
                 // used as a local cwd for child_process.spawn(). When the extension
                 // runs in the Local Extension Host on Windows while connected to a
                 // remote workspace, fall back to the user's home directory.

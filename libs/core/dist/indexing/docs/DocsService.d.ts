@@ -52,6 +52,10 @@ export default class DocsService {
     initStatuses(): Promise<void>;
     abort(startUrl: string): void;
     shouldCancel(startUrl: string, startedWithEmbedder: string): boolean;
+    /**
+     * 功能：判断是否可使用 transformers.js 作为默认嵌入模型。
+     * 返回：Flutter 环境默认返回 true。
+     */
     canUseTransformersEmbeddings(): Promise<boolean>;
     getEmbeddingsProvider(): Promise<{
         provider: ILLM;

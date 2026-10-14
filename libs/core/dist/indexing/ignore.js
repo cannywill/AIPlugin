@@ -3,6 +3,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ContinueError, ContinueErrorReason } from "../util/errors";
 // Security-focused ignore patterns - these should always be excluded for security reasons
+/**
+ * 文件类型：索引忽略配置
+ * 文件作用：定义默认索引时忽略的目录与文件类型。
+ * 主要职责：避免索引无关或敏感目录，聚焦 Flutter 运行所需内容。
+ */
 export const DEFAULT_SECURITY_IGNORE_FILETYPES = [
     // Environment and configuration files with secrets
     "*.env",
@@ -158,7 +163,6 @@ export const ADDITIONAL_INDEXING_IGNORE_DIRS = [
     "out/",
     "bin/",
     ".pytest_cache/",
-    ".vscode-test/",
     "__pycache__/",
     "site-packages/",
     ".gradle/",
@@ -168,7 +172,6 @@ export const ADDITIONAL_INDEXING_IGNORE_DIRS = [
     "vendor/",
     ".venv/",
     "venv/",
-    ".vscode/",
     ".idea/",
     ".vs/",
 ];

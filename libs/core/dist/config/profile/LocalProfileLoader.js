@@ -43,8 +43,7 @@ export default class LocalProfileLoader {
             packageIdentifier: {
                 uriType: "file",
                 fileUri: this.overrideAssistantFile?.path ?? getPrimaryConfigFilePath(),
-                // Pass pre-read content to bypass fs.readFileSync, which fails for
-                // vscode-remote:// URIs when Windows host connects to WSL (#10450)
+                // 直接传入预读取内容，避免重复读取与路径差异问题
                 content: this.overrideAssistantFile?.content,
             },
         });

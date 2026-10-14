@@ -190,6 +190,88 @@ const formatMessageForO1OrGpt5ForResponses = (
   return input;
 };
 
+function collapseImmediateDuplicatePhrases(text: string): string {
+  if (text.length < 4) {
+    return text;
+  }
+
+  let result = text;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const maxUnitLength = Math.min(24, Math.floor(result.length / 2));
+    for (let unitLength = maxUnitLength; unitLength >= 2; unitLength--) {
+      let buffer = "";
+      let cursor = 0;
+      let localChanged = false;
+
+      while (cursor < result.length) {
+        if (cursor + unitLength * 2 <= result.length) {
+          const unit = result.slice(cursor, cursor + unitLength);
+          let repeatCount = 1;
+
+          while (
+            cursor + unitLength * (repeatCount + 1) <= result.length &&
+            result.slice(
+              cursor + unitLength * repeatCount,
+              cursor + unitLength * (repeatCount + 1),
+            ) === unit
+          ) {
+            repeatCount++;
+          }
+
+          if (repeatCount > 1) {
+            buffer += unit;
+            cursor += unitLength * repeatCount;
+            localChanged = true;
+            continue;
+          }
+        }
+
+        buffer += result[cursor];
+        cursor++;
+      }
+
+      if (localChanged) {
+        result = buffer;
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+function coerceToIncrementalChunk(
+  incomingText: string,
+  existingText: string,
+): string {
+  if (!incomingText) {
+    return "";
+  }
+  if (!existingText) {
+    return incomingText;
+  }
+
+  if (incomingText.startsWith(existingText)) {
+    return incomingText.slice(existingText.length);
+  }
+
+  if (existingText.endsWith(incomingText)) {
+    return "";
+  }
+
+  const maxOverlap = Math.min(existingText.length, incomingText.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap--) {
+    if (existingText.endsWith(incomingText.slice(0, overlap))) {
+      return incomingText.slice(overlap);
+    }
+  }
+
+  return incomingText;
+}
+
 class OpenAI extends BaseLLM {
   public useLegacyCompletionsEndpoint: boolean | undefined = undefined;
 
@@ -559,8 +641,39 @@ class OpenAI extends BaseLLM {
       return;
     }
 
+    const shouldNormalizeDashScopeStream =
+      this.apiBase?.includes("dashscope.aliyuncs.com") ?? false;
+    let accumulatedAssistantText = "";
+
     for await (const value of streamSse(response)) {
-      const chunk = fromChatCompletionChunk(value);
+      let chunk = fromChatCompletionChunk(value);
+      if (
+        shouldNormalizeDashScopeStream &&
+        chunk?.role === "assistant" &&
+        typeof chunk.content === "string" &&
+        chunk.content.length > 0
+      ) {
+        const collapsed = collapseImmediateDuplicatePhrases(chunk.content);
+        const normalized = coerceToIncrementalChunk(
+          collapsed,
+          accumulatedAssistantText,
+        );
+        if (!normalized) {
+          continue;
+        }
+        accumulatedAssistantText += normalized;
+        chunk = {
+          ...chunk,
+          content: normalized,
+        };
+      } else if (
+        chunk?.role === "assistant" &&
+        typeof chunk.content === "string" &&
+        chunk.content.length > 0
+      ) {
+        accumulatedAssistantText += chunk.content;
+      }
+
       if (chunk) {
         yield chunk;
       }

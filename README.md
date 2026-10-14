@@ -52,6 +52,14 @@ both are large native artifacts you wire up at runtime. The recommended setup:
    `dist/` directory (this is a vanilla Vite build of the upstream
    [Continue GUI](https://github.com/continuedev/continue/tree/main/gui)).
 2. **Download or build a Continue binary** for your target platform.
+   This repo can now build its own local binary from vendored `libs/core`:
+
+```bash
+./scripts/build_local_continue_binary.sh
+```
+
+   On Apple Silicon Macs the output path is usually:
+   `/abs/path/to/AppAIPlugin/binary/bin/darwin-arm64/continue-binary`
 3. **Pass paths via `--dart-define`** when launching your Flutter app:
 
 ```bash

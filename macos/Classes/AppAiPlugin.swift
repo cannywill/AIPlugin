@@ -1,10 +1,14 @@
 import Cocoa
 import FlutterMacOS
-import Security
 
 public class AppAiPlugin: NSObject, FlutterPlugin {
   private static let channelName = "app_ai_plugin"
-  private static let keychainService = "com.cannywill.app_ai_plugin.secrets"
+  // macOS 上把 secret 持久化为应用支持目录下的 JSON 文件（权限 0600），
+  // 而不是写 Keychain。Keychain 在 debug 构建里每次签名都会变，导致反复弹
+  // "想要使用你存储在钥匙串中的机密信息" 对话框；改成文件后免弹窗，仍持久化。
+  // iOS 端依然走 Keychain（重装频率低，且是 iOS 原生推荐做法）。
+  private static let secretsFileName = "secrets.json"
+  private static let secretsBundleFallback = "com.cannywill.app_ai_plugin"
   private static let continueTutorialUrl = "https://continue.dev/walkthrough"
   private static let devToolsHint = "Continue 日志面板暂未映射到 Flutter 原生宿主，请查看 Flutter 调试控制台或原生日志。"
 
@@ -149,41 +153,64 @@ public class AppAiPlugin: NSObject, FlutterPlugin {
   }
 
   private func readKeychainValue(for key: String) -> String? {
-    var query = keychainQuery(for: key)
-    query[kSecReturnData as String] = true
-    query[kSecMatchLimit as String] = kSecMatchLimitOne
-
-    var result: CFTypeRef?
-    let status = SecItemCopyMatching(query as CFDictionary, &result)
-    guard status == errSecSuccess, let data = result as? Data else {
-      return nil
-    }
-    return String(data: data, encoding: .utf8)
+    return Self.loadSecretsFile()[key]
   }
 
   private func writeKeychainValue(_ value: String, for key: String) {
-    let data = Data(value.utf8)
-    let query = keychainQuery(for: key)
-    let attributes = [kSecValueData as String: data]
-    let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-
-    if updateStatus == errSecItemNotFound {
-      var item = query
-      item[kSecValueData as String] = data
-      SecItemAdd(item as CFDictionary, nil)
-    }
+    var stored = Self.loadSecretsFile()
+    stored[key] = value
+    Self.saveSecretsFile(stored)
   }
 
   private func deleteKeychainValue(for key: String) {
-    SecItemDelete(keychainQuery(for: key) as CFDictionary)
+    var stored = Self.loadSecretsFile()
+    if stored.removeValue(forKey: key) != nil {
+      Self.saveSecretsFile(stored)
+    }
   }
 
-  private func keychainQuery(for key: String) -> [String: Any] {
-    [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: Self.keychainService,
-      kSecAttrAccount as String: key,
-    ]
+  /// secrets.json 路径：~/Library/Application Support/<bundleId>/secrets.json
+  /// 返回 nil 表示既不能定位也无法创建目录（极少见，比如磁盘只读）。
+  private static func secretsFileURL() -> URL? {
+    let fm = FileManager.default
+    guard let baseDir = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+      return nil
+    }
+    let bundleId = Bundle.main.bundleIdentifier ?? Self.secretsBundleFallback
+    let dir = baseDir.appendingPathComponent(bundleId, isDirectory: true)
+    if !fm.fileExists(atPath: dir.path) {
+      do {
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+      } catch {
+        NSLog("[AppAiPlugin] failed to create secrets dir: %@", String(describing: error))
+        return nil
+      }
+    }
+    return dir.appendingPathComponent(Self.secretsFileName)
+  }
+
+  private static func loadSecretsFile() -> [String: String] {
+    guard let url = secretsFileURL() else { return [:] }
+    guard let data = try? Data(contentsOf: url) else { return [:] }
+    guard
+      let object = try? JSONSerialization.jsonObject(with: data),
+      let dict = object as? [String: String]
+    else {
+      return [:]
+    }
+    return dict
+  }
+
+  private static func saveSecretsFile(_ secrets: [String: String]) {
+    guard let url = secretsFileURL() else { return }
+    do {
+      let data = try JSONSerialization.data(withJSONObject: secrets, options: [.prettyPrinted, .sortedKeys])
+      try data.write(to: url, options: .atomic)
+      // 0600 — 仅当前用户可读写。
+      try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    } catch {
+      NSLog("[AppAiPlugin] failed to write secrets: %@", String(describing: error))
+    }
   }
 
   private func extractUrl(_ arguments: Any?) -> String? {

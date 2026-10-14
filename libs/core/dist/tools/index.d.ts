@@ -1,3 +1,8 @@
+/**
+ * 文件类型：工具集合
+ * 文件作用：组织工具定义与序列化逻辑。
+ * 主要职责：为 Flutter 环境提供可用工具列表与序列化能力。
+ */
 import { ConfigDependentToolParams, Tool } from "..";
 export declare const getBaseToolDefinitions: () => Tool[];
 export declare const getConfigDependentToolDefinitions: (params: ConfigDependentToolParams) => Promise<Tool[]>;

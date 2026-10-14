@@ -14,10 +14,12 @@ export interface ModelEntry {
 }
 
 const BAILIAN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
-const BAILIAN_API_KEY = "";
+const BAILIAN_API_KEY = "sk-2019401133d54d8eac0b29030aeabae1";
 
 export class Params {
-    static readonly isDebug = true;
+    // Dart 镜像：example/lib/params.dart Params.isDebug —— 修改时请同步两侧。
+    // 默认关闭：生产/默认体验下不渲染调试面板和运行时日志。开发时改 true。
+    static readonly isDebug = false;
 
     static readonly modelsList: ModelEntry[] = [
         {

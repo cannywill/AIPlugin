@@ -63,7 +63,6 @@ export declare class NextEditProvider {
     private _initializeCompletionRequest;
     private _generatePrompts;
     private _handleCompletion;
-    private _markDisplayedIfJetBrains;
     /**
      * This is a wrapper around provideInlineCompletionItems.
      * This is invoked when we call the model in the background using prefetch.

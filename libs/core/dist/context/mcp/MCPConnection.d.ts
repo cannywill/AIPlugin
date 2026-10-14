@@ -1,3 +1,8 @@
+/**
+ * 文件类型：连接管理
+ * 文件作用：管理 MCP 连接、会话与资源列表。
+ * 主要职责：处理 MCP 连接状态、错误与资源同步。
+ */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { IDE, InternalMcpOptions, MCPConnectionStatus, MCPPrompt, MCPResource, MCPResourceTemplate, MCPServerStatus, MCPTool } from "../..";
 export type MCPExtras = {

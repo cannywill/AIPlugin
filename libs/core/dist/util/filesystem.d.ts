@@ -21,6 +21,10 @@ declare class FileSystemIde implements IDE {
     listDir(dir: string): Promise<[string, FileType][]>;
     getRepoName(dir: string): Promise<string | undefined>;
     getTags(artifactId: string): Promise<IndexTag[]>;
+    /**
+     * 功能：返回 Flutter 专用的 IDE 识别信息。
+     * 返回：固定的 Flutter IDE 描述信息。
+     */
     getIdeInfo(): Promise<IdeInfo>;
     readRangeInFile(fileUri: string, range: Range): Promise<string>;
     isTelemetryEnabled(): Promise<boolean>;

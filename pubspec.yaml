@@ -9,14 +9,17 @@ repository: https://github.com/cannywill/AIPlugin
 issue_tracker: https://github.com/cannywill/AIPlugin/issues
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.0.0 <4.0.0'
   flutter: '>=3.3.0'
 
 dependencies:
   flutter:
     sdk: flutter
+  path: ^1.9.1
+  path_provider: ^2.1.5
   webview_flutter: ^4.13.1
   plugin_platform_interface: ^2.0.2
+  sqflite: ^2.4.2
 
 dev_dependencies:
   flutter_test:

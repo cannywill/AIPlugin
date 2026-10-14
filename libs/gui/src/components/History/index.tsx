@@ -176,7 +176,7 @@ export function History() {
 
       <div className="thin-scrollbar flex w-full flex-1 flex-col overflow-y-auto">
         {filteredAndSortedSessions.length === 0 && (
-          <div className="m-3 text-center">
+          <div className="text-vsc-foreground m-3 text-center">
             {isSessionMetadataLoading ? (
               "Loading Sessions..."
             ) : (
@@ -194,7 +194,7 @@ export function History() {
             {sessionGroups.map((group, groupIndex) => (
               <Fragment key={group.label}>
                 <tr
-                  className={`user-select-none sticky mb-3 ml-2 flex h-6 justify-start text-left text-base font-bold opacity-75 ${
+                  className={`text-vsc-foreground user-select-none sticky mb-3 ml-2 flex h-6 justify-start text-left text-base font-bold opacity-75 ${
                     groupIndex === 0 ? "mt-2" : "mt-8"
                   }`}
                 >

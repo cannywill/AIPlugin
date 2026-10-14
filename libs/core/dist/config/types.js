@@ -1,27 +1,18 @@
+/**
+ * 文件类型：类型声明模板
+ * 文件作用：生成 Continue Core 对外的类型声明字符串。
+ * 主要职责：统一维护 Flutter 专用的公共类型与 IDE 约定。
+ */
 const Types = `
 declare global {
   import Parser from "web-tree-sitter";
   import { GetGhTokenArgs } from "./protocol/ide";
   declare global {
     interface Window {
-      ide?: "vscode";
+      ide?: "flutter";
       windowId: string;
       serverUrl: string;
-      vscMachineId: string;
-      vscMediaUrl: string;
-      fullColorTheme?: {
-        rules?: {
-          token?: string;
-          foreground?: string;
-        }[];
-      };
-      colorThemeName?: string;
       workspacePaths?: string[];
-      postIntellijMessage?: (
-        messageType: string,
-        data: any,
-        messageIde: string,
-      ) => void;
     }
   }
   
@@ -629,7 +620,7 @@ declare global {
     id: number;
   }
   
-  export type IdeType = "vscode" | "jetbrains";
+  export type IdeType = "flutter";
   
   export interface IdeInfo {
     ideType: IdeType;

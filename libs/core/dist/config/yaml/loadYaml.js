@@ -1,3 +1,8 @@
+/**
+ * 文件类型：配置加载
+ * 文件作用：解析 config.yaml 并转换为 Continue 运行时配置。
+ * 主要职责：处理 YAML 配置、模型与工具构建，以及上下文提供者加载。
+ */
 import { BLOCK_TYPES, mergeConfigYamlRequestOptions, mergeUnrolledAssistants, RegistryClient, unrollAssistant, validateConfigYaml, } from "@continuedev/config-yaml";
 import { dirname } from "node:path";
 import { MCPManagerSingleton } from "../../context/mcp/MCPManagerSingleton";
@@ -18,11 +23,15 @@ import { unrollLocalYamlBlocks } from "./loadLocalYamlBlocks";
 import { LocalPlatformClient } from "./LocalPlatformClient";
 import { llmsFromModelConfig } from "./models";
 import { convertYamlMcpConfigToInternalMcpOptions, convertYamlRuleToContinueRule, } from "./yamlToContinueConfig";
+/**
+ * 功能：加载并解析 config.yaml，同时合并本地 block 与远端配置。
+ * 入参：options 包含 IDE、控制面客户端与包定位信息。
+ * 返回：合并后的 YAML 配置结果与错误列表。
+ */
 async function loadConfigYaml(options) {
     const { overrideConfigYaml, controlPlaneClient, orgScopeId, ideSettings, ide, packageIdentifier, } = options;
     // Add local .continue blocks
-    // Use "content" field to pass pre-read content directly, avoiding
-    // fs.readFileSync which fails for vscode-remote:// URIs in WSL (#6242, #7810)
+    // Use "content" field to pass pre-read content directly，避免重复读取文件
     const localBlockPromises = BLOCK_TYPES.map(async (blockType) => {
         const localBlocks = await getAllDotContinueDefinitionFiles(ide, { includeGlobal: true, includeWorkspace: true, fileExtType: "yaml" }, blockType);
         return localBlocks.map((b) => ({
@@ -236,15 +245,7 @@ export async function configYamlToContinueConfig(options) {
             if (model.roles?.includes("embed")) {
                 const { provider } = model;
                 if (provider === "transformers.js") {
-                    if (ideInfo.ideType === "vscode") {
-                        continueConfig.modelsByRole.embed.push(new TransformersJsEmbeddingsProvider());
-                    }
-                    else {
-                        localErrors.push({
-                            fatal: false,
-                            message: `Transformers.js embeddings provider not supported in this IDE.`,
-                        });
-                    }
+                    continueConfig.modelsByRole.embed.push(new TransformersJsEmbeddingsProvider());
                 }
                 else {
                     continueConfig.modelsByRole.embed.push(...llms);
@@ -263,11 +264,6 @@ export async function configYamlToContinueConfig(options) {
                 message: `Failed to load model:\nName: ${model.name}\nModel: ${model.model}\nProvider: ${model.provider}\n${e instanceof Error ? e.message : e}`,
             });
         }
-    }
-    // Add transformers js to the embed models in vs code if not already added
-    if (ideInfo.ideType === "vscode" &&
-        !continueConfig.modelsByRole.embed.find((m) => m.providerName === "transformers.js")) {
-        continueConfig.modelsByRole.embed.push(new TransformersJsEmbeddingsProvider());
     }
     if (warnAboutFreeTrial) {
         localErrors.push({

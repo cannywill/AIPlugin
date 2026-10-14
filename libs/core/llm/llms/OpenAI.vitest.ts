@@ -134,6 +134,37 @@ describe("OpenAI", () => {
     vi.clearAllMocks();
   });
 
+  test("streamChat should normalize cumulative and duplicated DashScope chunks", async () => {
+    const openai = new OpenAI({
+      apiKey: "test-api-key",
+      model: "qwen-plus",
+      apiBase: "https://dashscope.aliyuncs.com/compatible-mode/v1/",
+    });
+
+    const mockFetch = setupMockFetch(undefined, [
+      { choices: [{ delta: { content: "你好你好！" } }] },
+      { choices: [{ delta: { content: "你好你好！有什么我可以！有什么我可以帮帮你的吗？" } }] },
+      { choices: [{ delta: { content: "你好你好！有什么我可以！有什么我可以帮帮你的吗？如果你想要讨论关于构建Flutter应用，构建Flutter应用，" } }] },
+    ]);
+    setupReadableStreamPolyfill();
+    (openai as any).fetch = mockFetch;
+    (openai as any).useOpenAIAdapterFor = [];
+
+    const chunks: string[] = [];
+    for await (const chunk of openai.streamChat(
+      [{ role: "user", content: "hello" }],
+      new AbortController().signal,
+    )) {
+      chunks.push(chunk.content);
+    }
+
+    expect(chunks).toEqual([
+      "你好！",
+      "有什么我可以帮你的吗？",
+      "如果你想要讨论关于构建Flutter应用，",
+    ]);
+  });
+
   test("streamChat should send a valid request", async () => {
     const openai = new OpenAI({
       apiKey: "test-api-key",

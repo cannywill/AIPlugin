@@ -29,7 +29,31 @@ export async function getSession(
   if (result.status === "error") {
     throw new Error(result.error);
   }
-  return result.content;
+  const session = result.content;
+  if (
+    session.history.length > 0 ||
+    session.title !== NEW_SESSION_TITLE
+  ) {
+    return session;
+  }
+
+  const latestResult = await ideMessenger.request("history/list", { limit: 1 });
+  if (latestResult.status === "error") {
+    throw new Error(latestResult.error);
+  }
+
+  const latestSessionId = latestResult.content.at(0)?.sessionId;
+  if (!latestSessionId || latestSessionId === id) {
+    return session;
+  }
+
+  const fallbackResult = await ideMessenger.request("history/load", {
+    id: latestSessionId,
+  });
+  if (fallbackResult.status === "error") {
+    throw new Error(fallbackResult.error);
+  }
+  return fallbackResult.content;
 }
 
 export async function getRemoteSession(
@@ -186,12 +210,12 @@ export const loadLastSession = createAsyncThunk<void, void, ThunkApiType>(
   async (_, { extra, dispatch, getState }) => {
     let lastSessionId = getState().session.lastSessionId;
 
-    // const lastSessionResult = await extra.ideMessenger.request("history/list", {
-    //   limit: 1,
-    // });
-    // if (lastSessionResult.status === "success") {
-    //   lastSessionId = lastSessionResult.content.at(0)?.sessionId;
-    // }
+    const lastSessionResult = await extra.ideMessenger.request("history/list", {
+      limit: 1,
+    });
+    if (lastSessionResult.status === "success") {
+      lastSessionId = lastSessionResult.content.at(0)?.sessionId;
+    }
 
     if (!lastSessionId) {
       dispatch(newSession());

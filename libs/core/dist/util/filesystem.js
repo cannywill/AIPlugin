@@ -1,3 +1,8 @@
+/**
+ * 文件类型：工具实现
+ * 文件作用：提供默认 IDE 文件系统适配实现。
+ * 主要职责：在没有宿主 IDE 的场景下提供基础文件能力与 IDE 信息。
+ */
 import * as fs from "node:fs";
 import { fileURLToPath } from "node:url";
 class FileSystemIde {
@@ -93,13 +98,17 @@ class FileSystemIde {
             },
         ];
     }
+    /**
+     * 功能：返回 Flutter 专用的 IDE 识别信息。
+     * 返回：固定的 Flutter IDE 描述信息。
+     */
     getIdeInfo() {
         return Promise.resolve({
-            ideType: "vscode",
-            name: "na",
-            version: "0.1",
+            ideType: "flutter",
+            name: "Flutter",
+            version: "1.0",
             remoteName: "na",
-            extensionVersion: "na",
+            extensionVersion: "flutter",
             isPrerelease: false,
         });
     }

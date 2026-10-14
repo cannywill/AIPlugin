@@ -1,3 +1,8 @@
+/**
+ * 文件类型：服务
+ * 文件作用：提供自动补全的主流程与缓存管理。
+ * 主要职责：根据输入生成补全、记录日志并处理展示状态。
+ */
 import { ConfigHandler } from "../config/ConfigHandler.js";
 import { IDE, ILLM } from "../index.js";
 import { GetLspDefinitionsFunction } from "./types.js";

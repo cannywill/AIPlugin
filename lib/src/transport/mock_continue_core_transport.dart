@@ -7,7 +7,7 @@ import 'core_transport.dart';
 typedef MockCoreResponseHandler =
     FutureOr<Object?> Function(ContinueMessage message);
 typedef MockStreamChatHandler =
-    FutureOr<String> Function(ContinueMessage message, String? prompt);
+    FutureOr<Object?> Function(ContinueMessage message, String? prompt);
 
 class MockContinueCoreTransport implements CoreTransport {
   MockContinueCoreTransport({
@@ -89,10 +89,10 @@ class MockContinueCoreTransport implements CoreTransport {
   Future<void> _handleStreamChat(ContinueMessage message) async {
     _logMessage('streamChat/start', message);
     final prompt = _extractLastUserPrompt(message.data);
-    String assistantContent;
+    Object? handlerResult;
     try {
-      assistantContent = streamChatHandler != null
-          ? await streamChatHandler!(message, prompt)
+      handlerResult = streamChatHandler != null
+          ? await Future<Object?>.value(streamChatHandler!(message, prompt))
           : prompt == null || prompt.isEmpty
           ? 'Mock Continue GUI response from AppAIPlugin.'
           : 'Mock Continue GUI response: $prompt';
@@ -113,24 +113,67 @@ class MockContinueCoreTransport implements CoreTransport {
       return;
     }
 
-    _messages.add(
-      ContinueMessage(
-        messageType: message.messageType,
-        messageId: message.messageId,
-        data: {
-          'done': false,
-          'content': {'role': 'assistant', 'content': assistantContent},
-          'status': 'success',
-        },
-      ),
-    );
-    _logMessage('streamChat/chunk', message);
+    try {
+      if (handlerResult is Stream<String>) {
+        await for (final chunk in handlerResult) {
+          if (chunk.isEmpty) {
+            continue;
+          }
+          _messages.add(
+            ContinueMessage(
+              messageType: message.messageType,
+              messageId: message.messageId,
+              data: {
+                'done': false,
+                'content': {'role': 'assistant', 'content': chunk},
+                'status': 'success',
+              },
+            ),
+          );
+          _logMessage('streamChat/chunk', message);
+        }
+        await _sendSuccess(message, null);
+        return;
+      }
 
-    if (streamDelay > Duration.zero) {
-      await Future<void>.delayed(streamDelay);
+      final assistantContent = (handlerResult as String?) ?? '';
+      if (assistantContent.isEmpty) {
+        await _sendSuccess(message, null);
+        return;
+      }
+
+      _messages.add(
+        ContinueMessage(
+          messageType: message.messageType,
+          messageId: message.messageId,
+          data: {
+            'done': false,
+            'content': {'role': 'assistant', 'content': assistantContent},
+            'status': 'success',
+          },
+        ),
+      );
+      _logMessage('streamChat/chunk', message);
+
+      if (streamDelay > Duration.zero) {
+        await Future<void>.delayed(streamDelay);
+      }
+
+      await _sendSuccess(message, null);
+    } catch (error, stackTrace) {
+      _logMessage(
+        'streamChat/streamError',
+        message,
+        details: 'error=$error',
+      );
+      developer.log(
+        'streamChat stream failed',
+        name: 'MockContinueCoreTransport',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      await _sendError(message, error.toString());
     }
-
-    await _sendSuccess(message, null);
   }
 
   String? _extractLastUserPrompt(Object? rawData) {

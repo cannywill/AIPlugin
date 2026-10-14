@@ -31,7 +31,7 @@ export const getConfigDependentToolDefinitions = async (params) => {
         tools.push(toolDefinitions.editFileTool);
         tools.push(toolDefinitions.singleFindAndReplaceTool);
     }
-    // missing support for remote os calls: https://github.com/microsoft/vscode/issues/252269
+    // Flutter 环境统一走本地执行，不区分远程 OS
     if (!isRemote) {
         tools.push(toolDefinitions.grepSearchTool);
     }

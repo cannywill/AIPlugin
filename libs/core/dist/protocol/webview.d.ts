@@ -1,3 +1,8 @@
+/**
+ * 文件类型：协议定义
+ * 文件作用：定义 Core/IDE 向 Webview 下发的消息协议。
+ * 主要职责：保留 Flutter 所需协议，移除非 Flutter 环境通道。
+ */
 import { ConfigResult } from "@continuedev/config-yaml";
 import { SerializedOrgWithProfiles } from "../config/ProfileLifecycleManager.js";
 import { ControlPlaneSessionInfo } from "../control-plane/AuthTypes.js";
@@ -35,7 +40,6 @@ export type ToWebviewFromIdeOrCoreProtocol = {
     setTTSActive: [boolean, void];
     getWebviewHistoryLength: [undefined, number];
     getCurrentSessionId: [undefined, string];
-    "jetbrains/setColors": [Record<string, string | null | undefined>, void];
     sessionUpdate: [{
         sessionInfo: ControlPlaneSessionInfo | undefined;
     }, void];

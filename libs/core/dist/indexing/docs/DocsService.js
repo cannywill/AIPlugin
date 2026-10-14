@@ -196,12 +196,11 @@ export default class DocsService {
         }
         return false;
     }
-    // Determine if transformers.js embeddings are supported in this environment
+    /**
+     * 功能：判断是否可使用 transformers.js 作为默认嵌入模型。
+     * 返回：Flutter 环境默认返回 true。
+     */
     async canUseTransformersEmbeddings() {
-        const ideInfo = await this.ideInfoPromise;
-        if (ideInfo.ideType === "jetbrains") {
-            return false;
-        }
         return true;
     }
     // Get the appropriate embeddings provider
